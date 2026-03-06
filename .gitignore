@@ -1,0 +1,9 @@
+_build/
+build/
+.vscode/
+builddir/
+io.github.ricol03.gtk-test.yml
+.flatpak-builder
+.buildconfig
+src/bin/
+src/share/
