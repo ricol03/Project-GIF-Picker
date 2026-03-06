@@ -8,8 +8,12 @@ public class Window : Gtk.ApplicationWindow {
 	private Dialogs dialog = new Dialogs();
 	private Gif gif = new Gif();
 	private Files files = new Files();
-	private Gtk.ApplicationWindow main_window;
+	private File folder;
+	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "GIF Picker";
+	private Gtk.Box mainbox;
+	private Gtk.CenterBox centerbox;
+	//private Gtk.Box centerbox2;
 	private bool hasindex = false;
 	
     public Window(Gtk.Application app) {
@@ -80,12 +84,47 @@ public class Window : Gtk.ApplicationWindow {
 		headerbar.pack_start(searchbtn);
 		headerbar.pack_end(menubtn);
 
-		var box = new Gtk.CenterBox();
+		mainbox 	= new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		
+		setWindowContent();
+
+		mainwindow = new Gtk.ApplicationWindow(app) {
+			child = mainbox,
+			titlebar = headerbar,
+			default_height = 500,
+			default_width = 600,
+			title = windowtitle
+		};
+
+		mainwindow.present();
+    }
+    
+    public void setWindowContent() {
 		if (hasindex) {
-			var content = gif.makeGifs("test", "test2");
+			mainbox.remove(mainbox.get_first_child());
+			var content  = gif.makeGifs(mainwindow, folder.get_path() + "/1682466693678.gif", folder.get_path() + "/731142877979082823-1.gif");
+			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+			
+			content.set_vexpand(true);
+			content.set_hexpand(true);
+			contentbox.append(content);
+			contentbox.set_hexpand(true);
+			contentbox.set_vexpand(true);
+			
+			var scrolled = new Gtk.ScrolledWindow();
+			scrolled.set_min_content_height(200);
+			scrolled.set_hexpand(true);
+			scrolled.set_vexpand(true);
+			scrolled.set_child(contentbox);
+			
+			mainwindow.set_child(scrolled);
 		} else {
-			var centerbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 3);
+			centerbox 	= new Gtk.CenterBox();
+			
+			centerbox.set_hexpand(true);
+			centerbox.set_vexpand(true);
+		
+			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 3);
 			var image = new Gtk.Image.from_icon_name("close");
 			image.set_icon_size(2);
 			var text = new Gtk.Label("GIF list not available. Please select a location."); 
@@ -96,29 +135,61 @@ public class Window : Gtk.ApplicationWindow {
 				margin_start = 160,
 				margin_end = 160
 			};
-			
 			button.add_css_class("suggested-action");
 			
-			centerbox.set_valign(Gtk.Align.CENTER);
+			button.clicked.connect (() => {
+		    	//getFolder.begin();
+		    	
+		    	// dev logic
+		    	folder = File.new_build_filename ("/home/ricol03/Imagens/GIFs");
+				hasindex = true;
+				setWindowContent();
+		    });
+						
+			contentbox.set_valign(Gtk.Align.CENTER);
 			
-			centerbox.append(image);
-			centerbox.append(text);
-			centerbox.append(button);
-			box.set_center_widget(centerbox);
+			contentbox.append(image);
+			contentbox.append(text);
+			contentbox.append(button);
+			centerbox.set_center_widget(contentbox);
 			
+			mainbox.append(centerbox);
+			
+		}		
+	}
+	
+    public async void getFolder() {
+		try {
+		    folder = yield dialog.openFolderDialog(mainwindow);
+			if (folder != null) {
+				hasindex = true;
+				setWindowContent();
+			}
+		    messagebox();
+		} catch (Error e) {
+		    warning("No folder selected");
 		}
+	}
+	
+	public void messagebox() {
+		var message = new Gtk.MessageDialog (
+            mainwindow,
+            Gtk.DialogFlags.MODAL,
+            Gtk.MessageType.INFO,
+            Gtk.ButtonsType.OK,
+            "You selected:\n%s".printf (folder.get_path() ?? "(unknown)")
+        );
 
-		var scrolled = new Gtk.ScrolledWindow();
-		scrolled.set_child(box);
+        message.title = "File Selected";
 
-		main_window = new Gtk.ApplicationWindow(app) {
-			child = scrolled,
-			titlebar = headerbar,
-			default_height = 500,
-			default_width = 600,
-			title = windowtitle
-		};
+        message.response.connect ((_) => {
+            message.destroy ();
+        });
 
-		main_window.present();
-    }
+		message.present();
+		
+		if (folder.get_basename () != null) {
+			hasindex = true;
+		}	
+	}
 }
