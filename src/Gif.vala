@@ -12,7 +12,7 @@ public class Gif {
 		var file2 = File.new_for_path(filePath2);
 		
 		var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
-		
+
 		if (file.query_exists()) {
 			Gtk.Picture picture = new Gtk.Picture.for_file(file) {
 				margin_top 	 = 5,
@@ -32,6 +32,23 @@ public class Gif {
 				return true;
 			});
 			
+			var gesture = new Gtk.GestureClick();
+			gesture.pressed.connect((n_press, x, y) => {
+				string? etag;
+				Bytes bytes = file.load_bytes(null, out etag);
+
+				var provider = new Gdk.ContentProvider.union({
+					new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+					new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
+					new Gdk.ContentProvider.for_value(file)
+				});
+
+				var display = Gdk.Display.get_default();
+				var clipboard = display.get_clipboard();
+				clipboard.set_content(provider);
+			});
+			picture.add_controller(gesture);
+
 			box.append(picture);
 		} else {
 			return null;	
@@ -56,6 +73,23 @@ public class Gif {
 				return true;
 			});
 			
+			var gesture = new Gtk.GestureClick();
+			gesture.pressed.connect((n_press, x, y) => {
+				string? etag;
+				Bytes bytes = file2.load_bytes(null, out etag);
+
+				var provider = new Gdk.ContentProvider.union({
+					new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+					new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
+					new Gdk.ContentProvider.for_value(file2)
+				});
+
+				var display = Gdk.Display.get_default();
+				var clipboard = display.get_clipboard();
+				clipboard.set_content(provider);
+			});
+			picture2.add_controller(gesture);
+
 			box.append(picture2);
 		} else {
 			//box.set_size_request(mainwindow.get_size(Gtk.Orientation.HORIZONTAL) / 2, -1);

@@ -21,6 +21,8 @@ public class Window : Gtk.ApplicationWindow {
 			application: app
 		);
 		
+
+
 		try {
 			var bus = Bus.get_sync(BusType.SESSION);
 			var tray = new Tray();
@@ -98,16 +100,19 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainwindow.present();
     }
-    
+
     public void setWindowContent() {
 		if (hasindex) {
 			mainbox.remove(mainbox.get_first_child());
 			var content  = gif.makeGifs(mainwindow, folder.get_path() + "/1682466693678.gif", folder.get_path() + "/731142877979082823-1.gif");
+			var content2  = gif.makeGifs(mainwindow, folder.get_path() + "/C1KE.gif", folder.get_path() + "/flandre-flandre-scarlet.gif");
+
 			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 			
 			content.set_vexpand(true);
 			content.set_hexpand(true);
 			contentbox.append(content);
+			contentbox.append(content2);
 			contentbox.set_hexpand(true);
 			contentbox.set_vexpand(true);
 			
