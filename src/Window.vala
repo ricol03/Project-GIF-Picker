@@ -9,11 +9,11 @@ public class Window : Gtk.ApplicationWindow {
 	private Gif gif = new Gif();
 	private Files files = new Files();
 	private File folder;
+	private string[] filePaths;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "GIF Picker";
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
-	//private Gtk.Box centerbox2;
 	private bool hasindex = false;
 	
     public Window(Gtk.Application app) {
@@ -21,7 +21,14 @@ public class Window : Gtk.ApplicationWindow {
 			application: app
 		);
 		
+		files.createFileIndex.begin("/home/ricol03/Imagens/GIFs decents", (obj, res) => {
+			try {
+				filePaths = files.createFileIndex.end(res);
 
+			} catch (Error e) {
+				warning(e.message);
+			}
+		});
 
 		try {
 			var bus = Bus.get_sync(BusType.SESSION);
@@ -67,6 +74,12 @@ public class Window : Gtk.ApplicationWindow {
 		menubox.append("Save File...", "app.save");
 		menubox.append("Quit", "app.quit");
 
+		var refreshbtn = new Gtk.Button() {
+			icon_name = "reload-symbolic",
+		};
+		refreshbtn.set_tooltip_markup("Refresh");
+		refreshbtn.set_action_name("app.refresh");
+
 		var menubtn = new Gtk.MenuButton() {
 			icon_name = "open-menu-symbolic",
 			primary = true,
@@ -85,6 +98,7 @@ public class Window : Gtk.ApplicationWindow {
 		};
 		headerbar.pack_start(searchbtn);
 		headerbar.pack_end(menubtn);
+		headerbar.pack_end(refreshbtn);
 
 		mainbox 	= new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		
@@ -104,15 +118,26 @@ public class Window : Gtk.ApplicationWindow {
     public void setWindowContent() {
 		if (hasindex) {
 			mainbox.remove(mainbox.get_first_child());
-			var content  = gif.makeGifs(mainwindow, folder.get_path() + "/1682466693678.gif", folder.get_path() + "/731142877979082823-1.gif");
-			var content2  = gif.makeGifs(mainwindow, folder.get_path() + "/C1KE.gif", folder.get_path() + "/flandre-flandre-scarlet.gif");
-
 			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 			
-			content.set_vexpand(true);
-			content.set_hexpand(true);
-			contentbox.append(content);
-			contentbox.append(content2);
+			for (int i = 0; i < 8; i++) {
+				warning(filePaths[i]);
+				if (filePaths[i] == null)
+					break;
+
+				var content = gif.makeGifs(
+					mainwindow,
+					folder.get_path() + "/" + filePaths[i],
+					folder.get_path() + "/" + filePaths[++i]
+				);
+
+				warning(i.to_string());
+
+				content.set_vexpand(true);
+				content.set_hexpand(true);
+				contentbox.append(content);
+			}
+
 			contentbox.set_hexpand(true);
 			contentbox.set_vexpand(true);
 			
@@ -146,7 +171,7 @@ public class Window : Gtk.ApplicationWindow {
 		    	//getFolder.begin();
 		    	
 		    	// dev logic
-		    	folder = File.new_build_filename ("/home/ricol03/Imagens/GIFs");
+		    	folder = File.new_build_filename ("/home/ricol03/Imagens/GIFs decents");
 				hasindex = true;
 				setWindowContent();
 		    });

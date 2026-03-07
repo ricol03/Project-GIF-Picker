@@ -7,7 +7,9 @@ using Gdk;
 
 public class Application : Gtk.Application {
 	private Dialogs dialog = new Dialogs();
- 	private Gtk.ApplicationWindow window; 
+	private Files files = new Files();
+	private string[] filePaths = null;
+ 	private Window window;
     
     public Application() {
 		Object (
@@ -33,17 +35,28 @@ public class Application : Gtk.Application {
 		// 	dialog.saveFileDialog(main_window, text_view);
 		// });
 
+		var refresh_action = new SimpleAction ("refresh", null);
+
+		add_action(refresh_action);
+		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
+		refresh_action.activate.connect(() => {
+			files.createFileIndex("/home/ricol03/Imagens/GIFs decents");
+			window.setWindowContent();
+		});
+
 		var open_action = new SimpleAction ("open", null);
 
 		add_action(open_action);
 		set_accels_for_action("app.open", new string[] {"<Control>o"});
 		open_action.activate.connect(() => {
 			dialog.openFolderDialog(window);
+
 		});
     }
 
     protected override void activate() {
 		base.activate();
- 		window = new Window(this);
+
+		window = new Window(this);
  	}
 }

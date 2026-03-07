@@ -96,7 +96,7 @@ public class Gif {
 		}
 			
 		box.set_halign(Gtk.Align.CENTER);
-		box.set_size_request(-1, 200);
+		box.set_size_request(-1, 300);
 		return box;
 	}
 }
