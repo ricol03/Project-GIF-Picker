@@ -21,10 +21,9 @@ public class Window : Gtk.ApplicationWindow {
 			application: app
 		);
 		
-		files.createFileIndex.begin("/home/ricol03/Imagens/GIFs decents", (obj, res) => {
+		files.createFileIndex.begin("/home/ricol03/Imagens/GIFs", (obj, res) => {
 			try {
 				filePaths = files.createFileIndex.end(res);
-
 			} catch (Error e) {
 				warning(e.message);
 			}
@@ -78,7 +77,17 @@ public class Window : Gtk.ApplicationWindow {
 			icon_name = "reload-symbolic",
 		};
 		refreshbtn.set_tooltip_markup("Refresh");
-		refreshbtn.set_action_name("app.refresh");
+
+		var filterbtn = new Gtk.Button() {
+			icon_name = "filter-symbolic",
+		};
+		filterbtn.set_tooltip_markup("Filter");
+
+		var searchbtn = new Gtk.MenuButton() {
+			icon_name = "search-symbolic",
+			primary = true,
+		};
+		searchbtn.set_tooltip_markup("Search");
 
 		var menubtn = new Gtk.MenuButton() {
 			icon_name = "open-menu-symbolic",
@@ -87,22 +96,24 @@ public class Window : Gtk.ApplicationWindow {
 		menubtn.set_menu_model(menubox);
 		menubtn.set_tooltip_markup("Menu");
 		
-		var searchbtn = new Gtk.MenuButton() {
-			icon_name = "search-symbolic",
-			primary = true,
-		};
-		searchbtn.set_tooltip_markup("Search");
+		if (hasindex) {
+			refreshbtn.set_action_name("app.refresh");
+		} else {
+			refreshbtn.set_sensitive(false);
+			filterbtn.set_sensitive(false);
+		}
 
 		var headerbar = new Gtk.HeaderBar() {
 			show_title_buttons = true
 		};
 		headerbar.pack_start(searchbtn);
 		headerbar.pack_end(menubtn);
+		headerbar.pack_end(filterbtn);
 		headerbar.pack_end(refreshbtn);
 
 		mainbox 	= new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		
-		setWindowContent();
+		setWindowContent(null);
 
 		mainwindow = new Gtk.ApplicationWindow(app) {
 			child = mainbox,
@@ -115,23 +126,42 @@ public class Window : Gtk.ApplicationWindow {
 		mainwindow.present();
     }
 
-    public void setWindowContent() {
+    public void setWindowContent(string[]? newfilepaths) {
+
+		if (newfilepaths != null)
+			filePaths = newfilepaths;
+
 		if (hasindex) {
+			warning(mainbox.get_first_child().get_name());
 			mainbox.remove(mainbox.get_first_child());
 			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 			
-			for (int i = 0; i < 8; i++) {
-				warning(filePaths[i]);
+			foreach(var file in filePaths)
+				warning("lista deles: " + file.to_string());
+
+			for (int i = 0; i < filePaths.length; i++) {
+				//warning(filePaths[i]);
 				if (filePaths[i] == null)
 					break;
 
-				var content = gif.makeGifs(
-					mainwindow,
-					folder.get_path() + "/" + filePaths[i],
-					folder.get_path() + "/" + filePaths[++i]
-				);
+				Gtk.Box content = null;
+				if (filePaths[i+1] != null) {
+					//warning("1 - " + filePaths[i] + " | " + filePaths[i+1]);
+					content = gif.makeGifs(
+						mainwindow,
+						folder.get_path() + "/" + filePaths[i],
+						folder.get_path() + "/" + filePaths[++i]
+					);
+				} else {
+					//warning("2 - " + filePaths[i]);
+					content = gif.makeGifs(
+						mainwindow,
+						folder.get_path() + "/" + filePaths[i],
+						null
+					);
+				}
 
-				warning(i.to_string());
+				//warning(i.to_string());
 
 				content.set_vexpand(true);
 				content.set_hexpand(true);
@@ -147,7 +177,7 @@ public class Window : Gtk.ApplicationWindow {
 			scrolled.set_vexpand(true);
 			scrolled.set_child(contentbox);
 			
-			mainwindow.set_child(scrolled);
+			mainbox.append(scrolled);
 		} else {
 			centerbox 	= new Gtk.CenterBox();
 			
@@ -171,9 +201,9 @@ public class Window : Gtk.ApplicationWindow {
 		    	//getFolder.begin();
 		    	
 		    	// dev logic
-		    	folder = File.new_build_filename ("/home/ricol03/Imagens/GIFs decents");
+		    	folder = File.new_build_filename("/home/ricol03/Imagens/GIFs");
 				hasindex = true;
-				setWindowContent();
+				setWindowContent(null);
 		    });
 						
 			contentbox.set_valign(Gtk.Align.CENTER);
@@ -193,7 +223,7 @@ public class Window : Gtk.ApplicationWindow {
 		    folder = yield dialog.openFolderDialog(mainwindow);
 			if (folder != null) {
 				hasindex = true;
-				setWindowContent();
+				setWindowContent(null);
 			}
 		    messagebox();
 		} catch (Error e) {

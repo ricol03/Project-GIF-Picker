@@ -40,8 +40,15 @@ public class Application : Gtk.Application {
 		add_action(refresh_action);
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
 		refresh_action.activate.connect(() => {
-			files.createFileIndex("/home/ricol03/Imagens/GIFs decents");
-			window.setWindowContent();
+			files.createFileIndex.begin("/home/ricol03/Imagens/GIFs", (obj, res) => {
+			try {
+				filePaths = files.createFileIndex.end(res);
+				window.setWindowContent(filePaths);
+			} catch (Error e) {
+				warning(e.message);
+			}
+		});
+
 		});
 
 		var open_action = new SimpleAction ("open", null);

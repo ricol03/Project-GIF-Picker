@@ -20,8 +20,10 @@ public class Files {
 		        if (files == null || files.length() == 0)
 		            break;
 
-		        foreach (var info in files)
+		        foreach (var info in files) {
+					warning(info.get_name());
 		            filePaths += info.get_name();
+				}
 		    }
 
         	yield e.close_async();

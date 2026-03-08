@@ -7,17 +7,19 @@ public class Gif {
 	
 	public Gif() {}
 	
-	public Gtk.Box makeGifs(Gtk.ApplicationWindow mainwindow, string filePath1, string filePath2) {
+	public Gtk.Box makeGifs(Gtk.ApplicationWindow mainwindow, string filePath1, string? filePath2) {
 		var file = File.new_for_path(filePath1);
 		var file2 = File.new_for_path(filePath2);
 		
+		warning("- " + filePath1 + " | " + filePath2);
+
 		var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
 
 		if (file.query_exists()) {
 			Gtk.Picture picture = new Gtk.Picture.for_file(file) {
 				margin_top 	 = 5,
 				margin_start = 5,
-				margin_end	 = 5		
+				margin_end	 = 5
 			};
 			var animation = new Gdk.PixbufAnimation.from_file(filePath1);
 			var iter = animation.get_iter(null);
@@ -92,6 +94,7 @@ public class Gif {
 
 			box.append(picture2);
 		} else {
+
 			//box.set_size_request(mainwindow.get_size(Gtk.Orientation.HORIZONTAL) / 2, -1);
 		}
 			
