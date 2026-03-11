@@ -15,6 +15,9 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
 	private bool hasindex = false;
+	Gdk.Cursor cursor = new Gdk.Cursor.from_name("pointer", null);
+	private Gtk.StringList model = new Gtk.StringList(null);
+	int currentCount = 0;
 	
     public Window(Gtk.Application app) {
 		Object (
@@ -134,50 +137,100 @@ public class Window : Gtk.ApplicationWindow {
 		if (hasindex) {
 			warning(mainbox.get_first_child().get_name());
 			mainbox.remove(mainbox.get_first_child());
-			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
-			
-			foreach(var file in filePaths)
-				warning("lista deles: " + file.to_string());
 
-			for (int i = 0; i < filePaths.length; i++) {
-				//warning(filePaths[i]);
-				if (filePaths[i] == null)
-					break;
-
-				Gtk.Box content = null;
-				if (filePaths[i+1] != null) {
-					//warning("1 - " + filePaths[i] + " | " + filePaths[i+1]);
-					content = gif.makeGifs(
-						mainwindow,
-						folder.get_path() + "/" + filePaths[i],
-						folder.get_path() + "/" + filePaths[++i]
-					);
-				} else {
-					//warning("2 - " + filePaths[i]);
-					content = gif.makeGifs(
-						mainwindow,
-						folder.get_path() + "/" + filePaths[i],
-						null
-					);
-				}
-
-				//warning(i.to_string());
-
-				content.set_vexpand(true);
-				content.set_hexpand(true);
-				contentbox.append(content);
+			for (currentCount = 0; currentCount < 8; currentCount++) {
+				model.append(filePaths[currentCount]);
 			}
 
-			contentbox.set_hexpand(true);
-			contentbox.set_vexpand(true);
+			var selection = new Gtk.SingleSelection(model);
+			var factory = new Gtk.SignalListItemFactory();
+
+			Gtk.Box content = null;
+
+			factory.setup.connect((obj) => {
+				var listitem = (Gtk.ListItem)obj;
+				var picture = new Gtk.Picture();
+				picture.set_size_request(150, 200);
+				picture.set_content_fit(Gtk.ContentFit.CONTAIN);
+				picture.set_hexpand(true);
+				picture.set_vexpand(true);
+
+				var label = new Gtk.Label("") {
+					margin_top = 10
+				};
+
+				var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+				box.set_halign(Gtk.Align.CENTER);
+				box.set_size_request(150, 250);
+
+				box.append(picture);
+				box.append(label);
+
+				listitem.set_child(box);
+			});
+
+			factory.bind.connect((obj) => {
+				var listitem = (Gtk.ListItem)obj;
+				var stringitem = (Gtk.StringObject)listitem.get_item();
+				var filename = stringitem.get_string();
+
+				var box = (Gtk.Box)listitem.get_child();
+
+				var picture = (Gtk.Picture)box.get_first_child();
+				var label = (Gtk.Label)box.get_last_child();
+
+				gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
+
+				label.set_label(filename);
+
+				var gesture = new Gtk.GestureClick();
+				gesture.pressed.connect((n_press, x, y) => {
+					var file = File.new_for_path(folder.get_path() + "/" + filename);
+					mainwindow.set_cursor(cursor);
+
+					string? etag;
+					Bytes bytes = file.load_bytes(null, out etag);
+
+					var provider = new Gdk.ContentProvider.union({
+						new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+						new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
+						new Gdk.ContentProvider.for_value(file)
+					});
+
+					var display = Gdk.Display.get_default();
+					var clipboard = display.get_clipboard();
+					clipboard.set_content(provider);
+				});
+				box.add_controller(gesture);
+
+				box.set_hexpand (true);
+				box.set_vexpand (true);
+				box.set_halign (Gtk.Align.FILL);
+				box.set_valign (Gtk.Align.FILL);
+			});
+
+			factory.unbind.connect((obj) => {
+				var listitem = (Gtk.ListItem)obj;
+				var box = (Gtk.Box)listitem.get_child();
+				var picture = (Gtk.Picture)box.get_first_child();
+
+				picture.set_paintable(null);
+				model.remove(0);
+			});
+
+			var grid = new Gtk.GridView (selection, factory);
+			grid.set_min_columns (2);
+			grid.set_max_columns (2);
 			
 			var scrolled = new Gtk.ScrolledWindow();
 			scrolled.set_min_content_height(200);
 			scrolled.set_hexpand(true);
 			scrolled.set_vexpand(true);
-			scrolled.set_child(contentbox);
+			scrolled.set_child(grid);
 			
 			mainbox.append(scrolled);
+
+			getAdjustment(scrolled);
 		} else {
 			centerbox 	= new Gtk.CenterBox();
 			
@@ -198,10 +251,10 @@ public class Window : Gtk.ApplicationWindow {
 			button.add_css_class("suggested-action");
 			
 			button.clicked.connect (() => {
-		    	//getFolder.begin();
-		    	
-		    	// dev logic
-		    	folder = File.new_build_filename("/home/ricol03/Imagens/GIFs");
+				//getFolder.begin();
+
+				// dev logic
+				folder = File.new_build_filename("/home/ricol03/Imagens/GIFs");
 				hasindex = true;
 				setWindowContent(null);
 		    });
@@ -230,7 +283,27 @@ public class Window : Gtk.ApplicationWindow {
 		    warning("No folder selected");
 		}
 	}
-	
+
+	public void getAdjustment(Gtk.ScrolledWindow scroll) {
+		var adjustment = scroll.get_vadjustment();
+
+		adjustment.value_changed.connect((obj) => {
+			double value = adjustment.get_value();
+			double upper = adjustment.get_upper();
+			double page = adjustment.get_page_size();
+
+			if (value + page >= upper - 200) {
+				int current = currentCount;
+				int end = current + 6;
+				for (int i = current; i < end; i++) {
+				    model.append(filePaths[i]);
+				}
+
+				currentCount = end;
+			}
+		});
+	}
+
 	public void messagebox() {
 		var message = new Gtk.MessageDialog (
             mainwindow,

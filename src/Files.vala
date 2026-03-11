@@ -35,9 +35,4 @@ public class Files {
 		return filePaths;
 	}
 	
-	public void getFiles(string filePath) {
-		//var path = File.get_path(filePath);
-		
-		
-	}
 }
