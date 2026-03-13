@@ -15,10 +15,23 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
 	private bool hasindex = false;
-	Gdk.Cursor cursor = new Gdk.Cursor.from_name("pointer", null);
+	private Gdk.Cursor cursor = new Gdk.Cursor.from_name("pointer", null);
 	private Gtk.StringList model = new Gtk.StringList(null);
-	int currentCount = 0;
 	
+	private int visible_start = 0;
+	private int totalfiles = 0;
+
+	private Gtk.SliceListModel slice = null;
+    private int offset = 0;
+    private int slice_size = 8;
+
+	private Gtk.Button refreshbtn = null;
+	private Gtk.Button filterbtn = null;
+	private Gtk.Button backbtn = null;
+	private Gtk.Button nextbtn = null;
+	private Gtk.Button searchbtn = null;
+	private Gtk.GridView grid = null;
+
     public Window(Gtk.Application app) {
 		Object (
 			application: app
@@ -35,7 +48,7 @@ public class Window : Gtk.ApplicationWindow {
 		try {
 			var bus = Bus.get_sync(BusType.SESSION);
 			var tray = new Tray();
-			
+
 			Bus.own_name(
 				BusType.SESSION,
 				"io.ricol03.gifpicker",
@@ -76,21 +89,30 @@ public class Window : Gtk.ApplicationWindow {
 		menubox.append("Save File...", "app.save");
 		menubox.append("Quit", "app.quit");
 
-		var refreshbtn = new Gtk.Button() {
+		refreshbtn = new Gtk.Button() {
 			icon_name = "reload-symbolic",
 		};
 		refreshbtn.set_tooltip_markup("Refresh");
 
-		var filterbtn = new Gtk.Button() {
+		filterbtn = new Gtk.Button() {
 			icon_name = "filter-symbolic",
 		};
 		filterbtn.set_tooltip_markup("Filter");
 
-		var searchbtn = new Gtk.MenuButton() {
+		searchbtn = new Gtk.Button() {
 			icon_name = "search-symbolic",
-			primary = true,
 		};
 		searchbtn.set_tooltip_markup("Search");
+
+		backbtn = new Gtk.Button() {
+			icon_name = "back-symbolic",
+		};
+		backbtn.set_tooltip_markup("Back");
+
+		nextbtn = new Gtk.Button() {
+			icon_name = "next-symbolic",
+		};
+		nextbtn.set_tooltip_markup("Next");
 
 		var menubtn = new Gtk.MenuButton() {
 			icon_name = "open-menu-symbolic",
@@ -98,24 +120,23 @@ public class Window : Gtk.ApplicationWindow {
 		};
 		menubtn.set_menu_model(menubox);
 		menubtn.set_tooltip_markup("Menu");
-		
-		if (hasindex) {
-			refreshbtn.set_action_name("app.refresh");
-		} else {
-			refreshbtn.set_sensitive(false);
-			filterbtn.set_sensitive(false);
-		}
 
 		var headerbar = new Gtk.HeaderBar() {
 			show_title_buttons = true
 		};
+
+		headerbar.pack_start(backbtn);
+		headerbar.pack_start(nextbtn);
 		headerbar.pack_start(searchbtn);
+
 		headerbar.pack_end(menubtn);
 		headerbar.pack_end(filterbtn);
 		headerbar.pack_end(refreshbtn);
 
 		mainbox 	= new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		
+		totalfiles = filePaths.length;
+
 		setWindowContent(null);
 
 		mainwindow = new Gtk.ApplicationWindow(app) {
@@ -135,14 +156,26 @@ public class Window : Gtk.ApplicationWindow {
 			filePaths = newfilepaths;
 
 		if (hasindex) {
+			refreshbtn.set_action_name("app.refresh");
+			backbtn.set_action_name("app.back");
+			nextbtn.set_action_name("app.next");
+
+			checkBackButton();
+
 			warning(mainbox.get_first_child().get_name());
 			mainbox.remove(mainbox.get_first_child());
 
-			for (currentCount = 0; currentCount < 8; currentCount++) {
-				model.append(filePaths[currentCount]);
+			for (int i = 0; i < filePaths.length; i++) {
+				model.append(filePaths[i]);
 			}
 
-			var selection = new Gtk.SingleSelection(model);
+			slice = new Gtk.SliceListModel(
+				model,
+				visible_start,
+				slice_size
+			);
+
+			var selection = new Gtk.NoSelection(slice);
 			var factory = new Gtk.SignalListItemFactory();
 
 			Gtk.Box content = null;
@@ -179,7 +212,9 @@ public class Window : Gtk.ApplicationWindow {
 				var picture = (Gtk.Picture)box.get_first_child();
 				var label = (Gtk.Label)box.get_last_child();
 
-				gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
+				uint id = gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
+
+				picture.set_data("gif-timeout", id);
 
 				label.set_label(filename);
 
@@ -214,8 +249,13 @@ public class Window : Gtk.ApplicationWindow {
 				var box = (Gtk.Box)listitem.get_child();
 				var picture = (Gtk.Picture)box.get_first_child();
 
+				uint player = picture.get_data("gif-timeout");
+
+				if (player != 0) {
+					Source.remove(player);
+				}
+
 				picture.set_paintable(null);
-				model.remove(0);
 			});
 
 			var grid = new Gtk.GridView (selection, factory);
@@ -229,11 +269,13 @@ public class Window : Gtk.ApplicationWindow {
 			scrolled.set_child(grid);
 			
 			mainbox.append(scrolled);
-
-			getAdjustment(scrolled);
 		} else {
+			refreshbtn.set_sensitive(false);
+			filterbtn.set_sensitive(false);
+			backbtn.set_sensitive(false);
+			nextbtn.set_sensitive(false);
+
 			centerbox 	= new Gtk.CenterBox();
-			
 			centerbox.set_hexpand(true);
 			centerbox.set_vexpand(true);
 		
@@ -284,24 +326,27 @@ public class Window : Gtk.ApplicationWindow {
 		}
 	}
 
-	public void getAdjustment(Gtk.ScrolledWindow scroll) {
-		var adjustment = scroll.get_vadjustment();
+	public void backPage() {
+		offset -= slice_size;
+        slice.set_offset(offset);
+ 		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
 
-		adjustment.value_changed.connect((obj) => {
-			double value = adjustment.get_value();
-			double upper = adjustment.get_upper();
-			double page = adjustment.get_page_size();
+		checkBackButton();
+	}
 
-			if (value + page >= upper - 200) {
-				int current = currentCount;
-				int end = current + 6;
-				for (int i = current; i < end; i++) {
-				    model.append(filePaths[i]);
-				}
+	public void nextPage() {
+		offset += slice_size;
+        slice.set_offset(offset);
+ 		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
 
-				currentCount = end;
-			}
-		});
+		checkBackButton();
+	}
+
+	public void checkBackButton() {
+		if (offset - slice_size < 0)
+			backbtn.set_sensitive(false);
+		else
+			backbtn.set_sensitive(true);
 	}
 
 	public void messagebox() {

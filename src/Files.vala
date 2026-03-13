@@ -34,5 +34,4 @@ public class Files {
 
 		return filePaths;
 	}
-	
 }

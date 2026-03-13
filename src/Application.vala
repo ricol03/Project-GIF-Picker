@@ -41,14 +41,29 @@ public class Application : Gtk.Application {
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
 		refresh_action.activate.connect(() => {
 			files.createFileIndex.begin("/home/ricol03/Imagens/GIFs", (obj, res) => {
-			try {
-				filePaths = files.createFileIndex.end(res);
-				window.setWindowContent(filePaths);
-			} catch (Error e) {
-				warning(e.message);
-			}
+				try {
+					filePaths = files.createFileIndex.end(res);
+					window.setWindowContent(filePaths);
+				} catch (Error e) {
+					warning(e.message);
+				}
+			});
 		});
 
+		var back_action = new SimpleAction ("back", null);
+
+		add_action(back_action);
+		set_accels_for_action("app.back", new string[] {"<Control>b"});
+		back_action.activate.connect(() => {
+			window.backPage();
+		});
+
+		var next_action = new SimpleAction ("next", null);
+
+		add_action(next_action);
+		set_accels_for_action("app.next", new string[] {"<Control>n"});
+		next_action.activate.connect(() => {
+			window.nextPage();
 		});
 
 		var open_action = new SimpleAction ("open", null);
