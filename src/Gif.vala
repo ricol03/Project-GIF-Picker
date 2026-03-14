@@ -4,7 +4,6 @@
  ****/
 
 public class Gif {
-	Gdk.Cursor cursor = new Gdk.Cursor.from_name("pointer", null);
 	
 	public Gif() {}
 	
