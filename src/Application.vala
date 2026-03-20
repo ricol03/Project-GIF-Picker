@@ -44,7 +44,7 @@ public class Application : Gtk.Application {
 			files.createFileIndex.begin(folder.get_path(), (obj, res) => {
 				try {
 					filePaths = files.createFileIndex.end(res);
-					window.setWindowContent(filePaths);
+					window.setGifList();
 				} catch (Error e) {
 					warning(e.message);
 				}

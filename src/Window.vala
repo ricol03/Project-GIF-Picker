@@ -32,11 +32,15 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.Button nextbtn = null;
 	private Gtk.Button searchbtn = null;
 	private Gtk.GridView grid = null;
+	private Gtk.SignalListItemFactory factory = null;
+	private Gtk.SingleSelection selection = null;
+	private Gtk.CustomFilter customfilter = null;
 
 	private Gtk.SearchBar search = new Gtk.SearchBar();
 	private bool isSearchActive = false;
 
 	private Gtk.HeaderBar headerbar = null;
+	private string filter = "";
 
     public Window(Gtk.Application app, bool index, File? fileFolder) {
 		application = app;
@@ -46,18 +50,10 @@ public class Window : Gtk.ApplicationWindow {
 		createSysTrayIcon();
 		createMenuOptions();
 
-		var entry = new Gtk.SearchEntry();
-		search.set_child(entry);
-		search.connect_entry(entry);
-		search.set_key_capture_widget(mainwindow);
+		setWindowState();
 
-		mainbox    = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		mainbox.append(centerbox);
-
-		var spinner = new Gtk.Spinner();
-		spinner.start();
-		spinner.set_size_request(50, 50);
-		mainbox.append(spinner);
 
 		mainwindow = new Gtk.ApplicationWindow(app) {
 			child = mainbox,
@@ -68,185 +64,242 @@ public class Window : Gtk.ApplicationWindow {
 		};
 		mainwindow.set_resizable(false);
 
+		var entry = new Gtk.SearchEntry();
+		search.set_child(entry);
+		search.connect_entry(entry);
+		search.set_key_capture_widget(mainwindow);
+
 		mainwindow.present();
 
-		files.getIndex(folder.get_path());
+		entry.search_changed.connect(() => {
+			filter = entry.get_text().down().strip();
 
-		files.index_ready.connect((paths) => {
-			filePaths = paths;
-			setWindowContent(filePaths);
+			if (filter == "")
+				customfilter.changed(Gtk.FilterChange.LESS_STRICT);
+			else
+				customfilter.changed(Gtk.FilterChange.DIFFERENT);
+
+			slice.set_offset(0);
+		});
+
+		mainwindow.close_request.connect(() => {
+			mainwindow.hide();
+			return true;
 		});
     }
 
-    public void setWindowContent(string[]? newfilepaths) {
-
-		if (newfilepaths != null)
-			filePaths = newfilepaths;
-
+    public void setWindowState() {
 		if (hasindex) {
-			searchbtn.set_action_name("app.search");
-			backbtn.set_action_name("app.back");
-			nextbtn.set_action_name("app.next");
-			refreshbtn.set_action_name("app.refresh");
+			files.getIndex(folder.get_path());
 
-			checkBackButton();
-
-			//warning(mainbox.get_first_child().get_name());
-			if (mainbox.get_last_child() != null)
-				if (mainbox.get_last_child().get_name() != null)
-					mainbox.remove(mainbox.get_last_child());
-
-			mainbox.append(search);
-
-			for (int i = 0; i < filePaths.length; i++)
-				model.append(filePaths[i]);
-
-			slice = new Gtk.SliceListModel(
-				model,
-				visibleStart,
-				sliceSize
-			);
-
-			var selection = new Gtk.NoSelection(slice);
-			var factory = new Gtk.SignalListItemFactory();
-
-			Gtk.Box content = null;
-
-			factory.setup.connect((obj) => {
-				var listitem = (Gtk.ListItem)obj;
-				var picture = new Gtk.Picture();
-				picture.set_size_request(150, 200);
-				picture.set_content_fit(Gtk.ContentFit.CONTAIN);
-				picture.set_hexpand(true);
-				picture.set_vexpand(true);
-
-				var label = new Gtk.Label("") {
-					margin_top = 10
-				};
-
-				var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
-				box.set_halign(Gtk.Align.CENTER);
-				box.set_size_request(150, 250);
-
-				box.append(picture);
-				box.append(label);
-
-				var motion = new Gtk.EventControllerMotion();
-				motion.enter.connect(() => {
-					mainwindow.set_cursor(cursorHand);
-				});
-
-				motion.leave.connect(() => {
-					mainwindow.set_cursor(cursorDefault);
-				});
-				box.add_controller(motion);
-
-				listitem.set_child(box);
+			files.index_ready.connect((paths) => {
+				filePaths = paths;
+				setModel();
+				setFactory();
+				setGifList();
 			});
-
-			factory.bind.connect((obj) => {
-				var listitem = (Gtk.ListItem)obj;
-				var stringitem = (Gtk.StringObject)listitem.get_item();
-				var filename = stringitem.get_string();
-
-				var box = (Gtk.Box)listitem.get_child();
-
-				var picture = (Gtk.Picture)box.get_first_child();
-				var label = (Gtk.Label)box.get_last_child();
-
-				uint id = gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
-
-				picture.set_data("gif-timeout", id);
-
-				label.set_label(filename);
-
-				var gesture = new Gtk.GestureClick();
-				gesture.pressed.connect((n_press, x, y) => {
-					var file = File.new_for_path(folder.get_path() + "/" + filename);
-
-					string? etag;
-					Bytes bytes = file.load_bytes(null, out etag);
-
-					var provider = new Gdk.ContentProvider.union({
-						new Gdk.ContentProvider.for_bytes("image/gif", bytes),
-						new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
-						new Gdk.ContentProvider.for_value(file)
-					});
-
-					var display = Gdk.Display.get_default();
-					var clipboard = display.get_clipboard();
-					clipboard.set_content(provider);
-				});
-				box.add_controller(gesture);
-
-				box.set_hexpand(true);
-				box.set_vexpand(true);
-				box.set_halign(Gtk.Align.FILL);
-				box.set_valign(Gtk.Align.FILL);
-			});
-
-			factory.unbind.connect((obj) => {
-				var listitem = (Gtk.ListItem)obj;
-				var box = (Gtk.Box)listitem.get_child();
-				var picture = (Gtk.Picture)box.get_first_child();
-
-				uint player = picture.get_data("gif-timeout");
-
-				if (player != 0) {
-					Source.remove(player);
-				}
-
-				picture.set_paintable(null);
-			});
-
-			grid = new Gtk.GridView(selection, factory);
-			grid.set_min_columns(2);
-			grid.set_max_columns(2);
-			
-			var scrolled = new Gtk.ScrolledWindow();
-			scrolled.set_min_content_height(200);
-			scrolled.set_hexpand(true);
-			scrolled.set_vexpand(true);
-			scrolled.set_child(grid);
-			
-			mainbox.append(scrolled);
 		} else {
-			searchbtn.set_sensitive(false);
-			refreshbtn.set_sensitive(false);
-			filterbtn.set_sensitive(false);
-			backbtn.set_sensitive(false);
-			nextbtn.set_sensitive(false);
+			setWindowContent();
+		}
+	}
 
-			centerbox = new Gtk.CenterBox();
-			centerbox.set_hexpand(true);
-			centerbox.set_vexpand(true);
-		
-			var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 3);
-			var image = new Gtk.Image.from_icon_name("close");
-			image.set_icon_size(2);
-			var text = new Gtk.Label("GIF list not available. Please select a location."); 
-			
-			var button = new Gtk.Button.with_label("Select location...") {
-				margin_top = 10,
-				margin_bottom = 2,
-				margin_start = 160,
-				margin_end = 160
+    public void setGifList() {
+		setSpinner(false);
+
+		searchbtn.set_action_name("app.search");
+		backbtn.set_action_name("app.back");
+		nextbtn.set_action_name("app.next");
+		refreshbtn.set_action_name("app.refresh");
+
+		checkBackButton();
+
+		if (mainbox.get_last_child() != null)
+			if (mainbox.get_last_child().get_name() != null)
+				mainbox.remove(mainbox.get_last_child());
+
+		mainbox.append(search);
+
+		grid = new Gtk.GridView(selection, factory);
+		grid.set_min_columns(2);
+		grid.set_max_columns(2);
+
+		var scrolled = new Gtk.ScrolledWindow();
+		scrolled.set_min_content_height(200);
+		scrolled.set_hexpand(true);
+		scrolled.set_vexpand(true);
+		scrolled.set_child(grid);
+
+		mainbox.append(scrolled);
+	}
+
+    public void setFactory() {
+
+		factory.setup.connect((obj) => {
+			var listitem = (Gtk.ListItem)obj;
+			var picture = new Gtk.Picture();
+			picture.set_size_request(150, 200);
+			picture.set_content_fit(Gtk.ContentFit.CONTAIN);
+			picture.set_hexpand(true);
+			picture.set_vexpand(true);
+
+			var label = new Gtk.Label("") {
+				margin_top = 10
 			};
-			button.add_css_class("suggested-action");
-			
-			button.clicked.connect (() => {
-				getFolder.begin();
-		    });
-						
-			contentbox.set_valign(Gtk.Align.CENTER);
-			
-			contentbox.append(image);
-			contentbox.append(text);
-			contentbox.append(button);
-			centerbox.set_center_widget(contentbox);
-			
-			mainbox.append(centerbox);
-		}		
+
+			var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+			box.set_halign(Gtk.Align.CENTER);
+			box.set_size_request(150, 250);
+
+			box.append(picture);
+			box.append(label);
+
+			var motion = new Gtk.EventControllerMotion();
+			motion.enter.connect(() => {
+				mainwindow.set_cursor(cursorHand);
+			});
+
+			motion.leave.connect(() => {
+				mainwindow.set_cursor(cursorDefault);
+			});
+			box.add_controller(motion);
+
+			listitem.set_child(box);
+		});
+
+		factory.bind.connect((obj) => {
+			var listitem = (Gtk.ListItem)obj;
+			var stringitem = (Gtk.StringObject)listitem.get_item();
+			var filename = stringitem.get_string();
+
+			var box = (Gtk.Box)listitem.get_child();
+
+			var picture = (Gtk.Picture)box.get_first_child();
+			var label = (Gtk.Label)box.get_last_child();
+
+			uint id = gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
+
+			picture.set_data("gif-timeout", id);
+
+			label.set_label(filename);
+
+			var gesture = new Gtk.GestureClick();
+			gesture.pressed.connect((n_press, x, y) => {
+				var file = File.new_for_path(folder.get_path() + "/" + filename);
+
+				string? etag;
+				Bytes bytes = file.load_bytes(null, out etag);
+
+				var provider = new Gdk.ContentProvider.union({
+					new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+					new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
+					new Gdk.ContentProvider.for_value(file)
+				});
+
+				var display = Gdk.Display.get_default();
+				var clipboard = display.get_clipboard();
+				clipboard.set_content(provider);
+			});
+			box.add_controller(gesture);
+
+			box.set_hexpand(true);
+			box.set_vexpand(true);
+			box.set_halign(Gtk.Align.FILL);
+			box.set_valign(Gtk.Align.FILL);
+		});
+
+		factory.unbind.connect((obj) => {
+			var listitem = (Gtk.ListItem)obj;
+			var box = (Gtk.Box)listitem.get_child();
+			var picture = (Gtk.Picture)box.get_first_child();
+
+			uint player = picture.get_data("gif-timeout");
+
+			if (player != 0) {
+				Source.remove(player);
+			}
+
+			picture.set_paintable(null);
+		});
+	}
+
+	public void setSpinner(bool status) {
+		if (status) {
+			var spinner = new Gtk.Spinner();
+			spinner.set_size_request(50, 50);
+			spinner.start();
+			mainbox.append(spinner);
+		} else {
+			var spinner = (Gtk.Spinner)mainbox.get_first_child();
+			spinner.stop();
+			mainbox.remove(spinner);
+		}
+	}
+
+    public void setModel() {
+		for (int i = 0; i < filePaths.length; i++)
+			model.append(filePaths[i]);
+
+		customfilter = new Gtk.CustomFilter((obj) => {
+			var item = obj as Gtk.StringObject;
+
+			if (filter == "")
+				return true;
+
+			if (item.get_string().down().contains(filter))
+				warning(item.get_string());
+
+			return item.get_string().down().contains(filter);
+		});
+
+		var filtered = new Gtk.FilterListModel(model, customfilter);
+
+		slice = new Gtk.SliceListModel(
+			filtered,
+			visibleStart,
+			sliceSize
+		);
+
+		selection = new Gtk.SingleSelection(slice);
+
+		factory = new Gtk.SignalListItemFactory();
+	}
+
+    public void setWindowContent() {
+		searchbtn.set_sensitive(false);
+		refreshbtn.set_sensitive(false);
+		filterbtn.set_sensitive(false);
+		backbtn.set_sensitive(false);
+		nextbtn.set_sensitive(false);
+
+		centerbox = new Gtk.CenterBox();
+		centerbox.set_hexpand(true);
+		centerbox.set_vexpand(true);
+
+		var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 3);
+		var image = new Gtk.Image.from_icon_name("close");
+		image.set_icon_size(2);
+		var text = new Gtk.Label("GIF list not available. Please select a location.");
+		
+		var button = new Gtk.Button.with_label("Select location...") {
+			margin_top = 10,
+			margin_bottom = 2,
+			margin_start = 160,
+			margin_end = 160
+		};
+		button.add_css_class("suggested-action");
+
+		button.clicked.connect (() => {
+			getFolder.begin();
+	    });
+
+		contentbox.set_valign(Gtk.Align.CENTER);
+
+		contentbox.append(image);
+		contentbox.append(text);
+		contentbox.append(button);
+		centerbox.set_center_widget(contentbox);
+
+		mainbox.append(centerbox);
 	}
 	
     public async void getFolder() {
@@ -255,7 +308,7 @@ public class Window : Gtk.ApplicationWindow {
 			if (folder != null) {
 				hasindex = true;
 				files.saveSettingsFile(folder.get_path());
-				setWindowContent(null);
+				setWindowState();
 			}
 		} catch (Error e) {
 		    warning("No folder selected");
@@ -421,8 +474,20 @@ public class Window : Gtk.ApplicationWindow {
 
 		message.present();
 		
-		if (folder.get_basename () != null) {
+		if (folder.get_basename() != null) {
 			hasindex = true;
 		}	
+	}
+
+	public void filterFiles(string filter) {
+		string[] newFilePaths = null;
+		int count = 0;
+		for (int i = 0; i < filePaths.length; i++)
+			if (filePaths[i].contains(filter)) {
+				newFilePaths[count] = filePaths[i];
+				count++;
+			}
+
+		filePaths = newFilePaths;
 	}
 }
