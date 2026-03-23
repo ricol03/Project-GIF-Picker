@@ -2,11 +2,13 @@
 Version=1.0
 Type=Application
 
-Name=My App
+Name=GIF Picker
 Comment=Proves that we can use Vala and Gtk
 Categories=Development;Education;
 
-Icon=io.github.myteam.myapp
-Exec=io.github.myteam.myapp
+Icon=io.ricol03.gif-picker
+Exec=io.ricol03.gif-picker
 Terminal=false
+StartupNotify=true
+DBusActivatable=false
 X-GNOME-UsesNotifications=true

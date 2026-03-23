@@ -19,7 +19,7 @@ public class Window : Gtk.ApplicationWindow {
 	private Gdk.Cursor cursorHand = new Gdk.Cursor.from_name("pointer", null);
 	private Gdk.Cursor cursorDefault = new Gdk.Cursor.from_name("default", null);
 	private Gtk.StringList model = new Gtk.StringList(null);
-	
+
 	private int visibleStart = 0;
 
 	private Gtk.SliceListModel slice = null;
@@ -41,15 +41,20 @@ public class Window : Gtk.ApplicationWindow {
 
 	private Gtk.HeaderBar headerbar = null;
 	private string filter = "";
+	private Gtk.Revealer revealer = null;
+
+	private string env = null;
 
     public Window(Gtk.Application app, bool index, File? fileFolder) {
 		application = app;
 		hasindex = index;
 		folder = fileFolder;
 
-		createSysTrayIcon();
-		createMenuOptions();
+		env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
+		if (env != "GNOME")
+			createSysTrayIcon();
 
+		createMenuOptions();
 		setWindowState();
 
 		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
@@ -98,9 +103,8 @@ public class Window : Gtk.ApplicationWindow {
 				setFactory();
 				setGifList();
 			});
-		} else {
+		} else
 			setWindowContent();
-		}
 	}
 
     public void setGifList() {
@@ -119,6 +123,11 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(search);
 
+		string status = files.getRevealerStatus();
+		if (status == null || status == "true" ) {
+			setRevealer();
+		}
+
 		grid = new Gtk.GridView(selection, factory);
 		grid.set_min_columns(2);
 		grid.set_max_columns(2);
@@ -129,11 +138,13 @@ public class Window : Gtk.ApplicationWindow {
 		scrolled.set_vexpand(true);
 		scrolled.set_child(grid);
 
+		if (revealer != null)
+			mainbox.append(revealer);
+
 		mainbox.append(scrolled);
 	}
 
     public void setFactory() {
-
 		factory.setup.connect((obj) => {
 			var listitem = (Gtk.ListItem)obj;
 			var picture = new Gtk.Picture();
@@ -222,6 +233,48 @@ public class Window : Gtk.ApplicationWindow {
 		});
 	}
 
+	public void setRevealer() {
+		files.setRevealerStatus("true");
+		revealer = new Gtk.Revealer();
+		revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN);
+		revealer.set_reveal_child(false);
+
+		var banner = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 10);
+		banner.add_css_class("notification");
+
+		var label = new Gtk.Label("");
+		label.set_hexpand(true);
+		label.set_halign(Gtk.Align.CENTER);
+		label.set_use_markup(true);
+
+		if (env == "GNOME")
+			label.set_markup("A keyboard shortcut needs to be set to show/hide the window. <a href='openwindow'>Click here.</a>");
+		else
+			label.set_markup("A different keyboard shortcut can be set to show/hide the window. <a href='openwindow'>Click here.</a>");
+
+		label.activate_link.connect((uri) => {
+			if (uri == "openwindow")
+				warning("settings window here");
+
+			return true;
+		});
+
+		var close_btn = new Gtk.Button.from_icon_name("window-close-symbolic");
+		close_btn.clicked.connect(() => {
+			revealer.set_reveal_child(false);
+			files.setRevealerStatus("false");
+		});
+
+		banner.append(label);
+		banner.append(close_btn);
+
+		revealer.set_child(banner);
+
+		mainbox.append(revealer);
+
+		revealer.set_reveal_child(true);
+	}
+
 	public void setSpinner(bool status) {
 		if (status) {
 			var spinner = new Gtk.Spinner();
@@ -279,7 +332,7 @@ public class Window : Gtk.ApplicationWindow {
 		var image = new Gtk.Image.from_icon_name("close");
 		image.set_icon_size(2);
 		var text = new Gtk.Label("GIF list not available. Please select a location.");
-		
+
 		var button = new Gtk.Button.with_label("Select location...") {
 			margin_top = 10,
 			margin_bottom = 2,
@@ -301,7 +354,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(centerbox);
 	}
-	
+
     public async void getFolder() {
 		try {
 		    folder = yield dialog.openFolderDialog(mainwindow);
@@ -368,7 +421,7 @@ public class Window : Gtk.ApplicationWindow {
 	private void createSysTrayIcon() {
 		try {
 			var bus = Bus.get_sync(BusType.SESSION);
-			var tray = new Tray();
+			var tray = new Tray(mainwindow);
 
 			Bus.own_name(
 				BusType.SESSION,
@@ -392,7 +445,7 @@ public class Window : Gtk.ApplicationWindow {
 
 					proxy.call_sync(
 						"RegisterStatusNotifierItem",
-						new Variant("(s)", "io.ricol03.gifpicker"),
+						new Variant("(s)", "/StatusNotifierItem"),
 						DBusCallFlags.NONE,
 						-1
 					);
@@ -473,10 +526,10 @@ public class Window : Gtk.ApplicationWindow {
         });
 
 		message.present();
-		
+
 		if (folder.get_basename() != null) {
 			hasindex = true;
-		}	
+		}
 	}
 
 	public void filterFiles(string filter) {

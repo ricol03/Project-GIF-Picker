@@ -1,4 +1,4 @@
-project('io.ricol03.gifpicker',
+project('io.ricol03.gif-picker',
     'vala', 'c'
 )
 
@@ -34,6 +34,6 @@ executable(
 
 
 install_data(
-    'data' / 'gif-picker.desktop',
+    'data' / 'io.ricol03.gif-picker.desktop',
     install_dir: get_option('datadir') / 'applications'
 )

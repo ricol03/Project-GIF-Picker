@@ -1,19 +1,90 @@
 /****
- * Files.vala - contains the logic for file indexing and management
+ * Files.vala - contains the logic for file indexing, read/write and management
  * ricol03, 2026
  ****/
 
 public class Files {
+	private string configDir = Environment.get_user_config_dir();
+	private string directory = "io.ricol03.gifpicker";
+	private string filename = "settings.conf";
 
 	public Files() {}
-	
+
+	public int getFileLines() {
+		string? line = null;
+		int current = 1;
+
+		try {
+			var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
+			var dis = new DataInputStream(file.read());
+
+			while ((line = dis.read_line(null)) != null)
+				current++;
+
+		} catch (Error e) {
+			warning(e.message);
+		}
+		warning(current.to_string());
+		return current;
+	}
+
+	public void setRevealerStatus(string text) {
+		if (getFileLines() >= 2) {
+			string content;
+			FileUtils.get_contents(Path.build_filename(configDir, directory, filename), out content);
+
+			string[] lines = content.split("\n");
+
+			int target = 1;
+
+			if (target < lines.length) {
+				lines[target] = text;
+			}
+
+			string new_content = string.joinv("\n", lines);
+
+			FileUtils.set_contents(Path.build_filename(configDir, directory, filename), new_content);
+		} else {
+			try {
+				var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
+				var stream = file.append_to(FileCreateFlags.NONE);
+
+				stream.write(text.data);
+				stream.close();
+			} catch (Error e) {
+				warning(e.message.to_string());
+			}
+		}
+	}
+
+	public string getRevealerStatus() {
+		string? line = null;
+		try {
+			var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
+			var dis = new DataInputStream(file.read());
+
+			int target_line = 2;
+			int current = 1;
+
+			while ((line = dis.read_line(null)) != null) {
+				if (current == target_line)
+				    break;
+
+				current++;
+			}
+		} catch (Error e) {
+			warning(e.message);
+		}
+
+		return line;
+	}
+
 	public File getFile(string path) {
 		return File.new_for_path(path);
 	}
 
 	public void createSettingsDirectory() {
-		string configDir = Environment.get_user_config_dir();
-		string dirPath = Path.build_filename(configDir, "io.ricol03.gifpicker");
+		string dirPath = Path.build_filename(configDir, directory);
 
 		File dir = File.new_for_path(dirPath);
 
@@ -27,8 +98,8 @@ public class Files {
 	}
 
 	public File checkSettingsFile() {
-		string configDir = Environment.get_user_config_dir();
-		string settingsPath = Path.build_filename(configDir, "io.ricol03.gifpicker", "settings.conf");
+
+		string settingsPath = Path.build_filename(configDir, directory, filename);
 
 		File file = File.new_for_path(settingsPath);
 		return file;
@@ -59,7 +130,7 @@ public class Files {
 	}
 
 	public async string[] createFileIndex(string folderPath) {
-		
+
 		File file = File.new_for_path(folderPath);
 		string[] filePaths = null;
 

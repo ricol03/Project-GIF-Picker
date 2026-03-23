@@ -11,7 +11,7 @@ public class Application : Gtk.Application {
 	private string[] filePaths = null;
  	private Window window;
 	private File folder;
-    
+
     public Application() {
 		Object (
 			application_id: "io.ricol03.gif-picker",
