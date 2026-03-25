@@ -8,9 +8,17 @@ using Gdk;
 public class Application : Gtk.Application {
 	private Dialogs dialog = new Dialogs();
 	private Files files = new Files();
+	private About about = new About();
 	private string[] filePaths = null;
- 	private Window window;
+ 	private Window window = null;
 	private File folder;
+
+	const string PORTAL_NAME = "org.freedesktop.portal.Desktop";
+	const string PORTAL_PATH = "/org/freedesktop/portal/desktop";
+	const string GLOBAL_SHORTCUTS_IFACE = "org.freedesktop.portal.GlobalShortcuts";
+
+	private DBusConnection? bus;
+	private string? session_handle;
 
     public Application() {
 		Object (
@@ -22,21 +30,13 @@ public class Application : Gtk.Application {
     protected override void startup() {
 		base.startup();
 
-		var quit_action = new SimpleAction ("quit", null);
+		var quit_action = new SimpleAction("quit", null);
 
 		add_action(quit_action);
 		set_accels_for_action("app.quit", new string[] {"<Control>q", "<Control>w"});
 		quit_action.activate.connect(quit);
 
-		// var save_action = new SimpleAction ("save", null);
-
-		// add_action(save_action);
-		// set_accels_for_action("app.save", new string[] {"<Control>s"});
-		// save_action.activate.connect(() => {
-		// 	dialog.saveFileDialog(main_window, text_view);
-		// });
-
-		var refresh_action = new SimpleAction ("refresh", null);
+		var refresh_action = new SimpleAction("refresh", null);
 
 		add_action(refresh_action);
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
@@ -51,7 +51,7 @@ public class Application : Gtk.Application {
 			});
 		});
 
-		var back_action = new SimpleAction ("back", null);
+		var back_action = new SimpleAction("back", null);
 
 		add_action(back_action);
 		set_accels_for_action("app.back", new string[] {"<Alt>b"});
@@ -59,7 +59,7 @@ public class Application : Gtk.Application {
 			window.backPage();
 		});
 
-		var next_action = new SimpleAction ("next", null);
+		var next_action = new SimpleAction("next", null);
 
 		add_action(next_action);
 		set_accels_for_action("app.next", new string[] {"<Alt>n"});
@@ -67,21 +67,35 @@ public class Application : Gtk.Application {
 			window.nextPage();
 		});
 
-		var open_action = new SimpleAction ("open", null);
+		var about_action = new SimpleAction("about", null);
 
-		add_action(open_action);
-		set_accels_for_action("app.open", new string[] {"<Control>o"});
-		open_action.activate.connect(() => {
-			dialog.openFolderDialog(window);
+		add_action(about_action);
+		set_accels_for_action("app.about", new string[] {"<Control>o"});
+		about_action.activate.connect(() => {
+			about.createWindow(window);
 		});
 
-		var search_action = new SimpleAction ("search", null);
+		var search_action = new SimpleAction("search", null);
 
 		add_action(search_action);
 		set_accels_for_action("app.search", new string[] {"<Control>s"});
 		search_action.activate.connect(() => {
 			window.toggleSearchBar();
 		});
+
+		//  var toggle_action = new SimpleAction("toggle", null);
+
+		//  add_action(toggle_action);
+		//  set_accels_for_action("app.toggle", new string[] {"<Alt>g"});
+		//  toggle_action.activate.connect(() => {
+		//  	var a = window.get_visible();
+
+		//  	warning(a.to_string());
+		//  	if (a)
+    	//  		window.hide();
+		//  	else
+		//  		window.present();
+		//  });
     }
 
     protected override void activate() {

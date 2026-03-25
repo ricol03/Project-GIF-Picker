@@ -91,6 +91,19 @@ public class Window : Gtk.ApplicationWindow {
 			mainwindow.hide();
 			return true;
 		});
+
+		//  var shortcuts = new GlobalShortcut(mainwindow);
+
+		//  mainwindow.show.connect (() => {
+		//  	var gdk_surface = mainwindow.get_native().get_surface ();
+		//  	if (gdk_surface is Gdk.Wayland.Toplevel) {
+		//  		((Gdk.Wayland.Toplevel) gdk_surface).export_handle((toplevel, handle) => {
+		//  		    string parent_id = "wayland:" + handle;
+		//  		    shortcuts.init.begin();
+		//  		});
+		//  	} else 
+		//  		shortcuts.init.begin();
+		//  });
     }
 
     public void setWindowState() {
@@ -131,6 +144,13 @@ public class Window : Gtk.ApplicationWindow {
 		grid = new Gtk.GridView(selection, factory);
 		grid.set_min_columns(2);
 		grid.set_max_columns(2);
+
+		grid.activate.connect((position) => {
+			var item = model.get_item(position) as Gtk.StringObject;
+			var filename = item.get_string();
+
+			setClipboard(filename);
+		});
 
 		var scrolled = new Gtk.ScrolledWindow();
 		scrolled.set_min_content_height(200);
@@ -183,6 +203,7 @@ public class Window : Gtk.ApplicationWindow {
 			var filename = stringitem.get_string();
 
 			var box = (Gtk.Box)listitem.get_child();
+			box.set_focusable(true);
 
 			var picture = (Gtk.Picture)box.get_first_child();
 			var label = (Gtk.Label)box.get_last_child();
@@ -193,22 +214,21 @@ public class Window : Gtk.ApplicationWindow {
 
 			label.set_label(filename);
 
+			var key = new Gtk.EventControllerKey();
+
+			key.key_pressed.connect((keyval, keycode, state) => {
+				if (keyval == Gdk.Key.Return || keyval == Gdk.Key.space) {
+					setClipboard(filename);
+					return true;
+				}
+
+				return false;
+			});
+			box.add_controller(key);
+
 			var gesture = new Gtk.GestureClick();
 			gesture.pressed.connect((n_press, x, y) => {
-				var file = File.new_for_path(folder.get_path() + "/" + filename);
-
-				string? etag;
-				Bytes bytes = file.load_bytes(null, out etag);
-
-				var provider = new Gdk.ContentProvider.union({
-					new Gdk.ContentProvider.for_bytes("image/gif", bytes),
-					new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
-					new Gdk.ContentProvider.for_value(file)
-				});
-
-				var display = Gdk.Display.get_default();
-				var clipboard = display.get_clipboard();
-				clipboard.set_content(provider);
+				setClipboard(filename);
 			});
 			box.add_controller(gesture);
 
@@ -231,6 +251,23 @@ public class Window : Gtk.ApplicationWindow {
 
 			picture.set_paintable(null);
 		});
+	}
+
+	public void setClipboard(string filename) {
+		var file = File.new_for_path(folder.get_path() + "/" + filename);
+
+		string? etag;
+		Bytes bytes = file.load_bytes(null, out etag);
+
+		var provider = new Gdk.ContentProvider.union({
+			new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+			new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
+			new Gdk.ContentProvider.for_value(file)
+		});
+
+		var display = Gdk.Display.get_default();
+		var clipboard = display.get_clipboard();
+		clipboard.set_content(provider);
 	}
 
 	public void setRevealer() {
@@ -462,13 +499,13 @@ public class Window : Gtk.ApplicationWindow {
 		var menubox = new Menu();
 
 		menubox.append("Open File...", "app.open");
-		menubox.append("Save File...", "app.save");
+		menubox.append("About", "app.about");
 		menubox.append("Quit", "app.quit");
 
 		refreshbtn = new Gtk.Button() {
 			icon_name = "reload-symbolic",
 		};
-		refreshbtn.set_tooltip_markup("Refresh");
+		refreshbtn.set_tooltip_markup("Refresh <span alpha='70%'>(Ctrl+R)</span>");
 
 		filterbtn = new Gtk.Button() {
 			icon_name = "filter-symbolic",
@@ -478,17 +515,17 @@ public class Window : Gtk.ApplicationWindow {
 		searchbtn = new Gtk.Button() {
 			icon_name = "search-symbolic",
 		};
-		searchbtn.set_tooltip_markup("Search");
+		searchbtn.set_tooltip_markup("Search <span alpha='70%'>(Ctrl+S)</span>");
 
 		backbtn = new Gtk.Button() {
 			icon_name = "back-symbolic",
 		};
-		backbtn.set_tooltip_markup("Back");
+		backbtn.set_tooltip_markup("Back <span alpha='70%'>(Alt+B)</span>");
 
 		nextbtn = new Gtk.Button() {
 			icon_name = "next-symbolic",
 		};
-		nextbtn.set_tooltip_markup("Next");
+		nextbtn.set_tooltip_markup("Next <span alpha='70%'>(Alt+N)</span>");
 
 		var menubtn = new Gtk.MenuButton() {
 			icon_name = "open-menu-symbolic",

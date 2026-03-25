@@ -7,3 +7,4 @@ io.github.ricol03.gtk-test.yml
 .buildconfig
 src/bin/
 src/share/
+src/GlobalShortcut.vala
