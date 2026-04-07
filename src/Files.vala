@@ -24,7 +24,7 @@ public class Files {
 		} catch (Error e) {
 			warning(e.message);
 		}
-		warning(current.to_string());
+
 		return current;
 	}
 

@@ -52,7 +52,6 @@ public class Window : Gtk.ApplicationWindow {
 
 		filterbtn.set_sensitive(false);
 		var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
-		//Gtk.IconTheme.add_search_path(icontheme, )
 
 		env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
 		if (env != "GNOME")
@@ -490,7 +489,6 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
 	public void checkNextButton(int length) {
-		warning("número: " + length.to_string());
 		var action = (SimpleAction)application.lookup_action("next");
 		if (offset + sliceSize >= length) {
 			nextbtn.set_sensitive(false);

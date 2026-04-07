@@ -4,11 +4,10 @@
  ****/
 
 public class Gif {
-	
+
 	public Gif() {}
-	
+
 	public uint makeGifsSmall(Gtk.Picture picture, string filePath) {
-		warning(filePath);
 		var animation = new Gdk.PixbufAnimation.from_file(filePath);
 		var iter = animation.get_iter(null);
 

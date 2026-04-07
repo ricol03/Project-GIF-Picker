@@ -9,6 +9,7 @@ public class Settings {
 	private Gtk.Application application;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "Settings";
+	private bool clickedbutton = false;
 
 	public Settings(Gtk.Application app, Window window) {
 
@@ -95,6 +96,7 @@ public class Settings {
 		applybutton.clicked.connect(() => {
 			files.saveSettingsFile("path", pathentry.get_text());
 			files.saveSettingsFile("revealer", "false");
+			clickedbutton = true;
 		});
 
 		buttonsbox.append(cancelbutton);
@@ -111,11 +113,14 @@ public class Settings {
 			title = windowtitle
 		};
 		mainwindow.set_transient_for(window);
-
+		mainwindow.set_resizable(false);
+		
 		mainwindow.present();
 
 		mainwindow.close_request.connect(() => {
-			window.refreshState();
+			if (clickedbutton)
+				window.refreshState();
+			
 			mainwindow.destroy();
 			return true;
 		});

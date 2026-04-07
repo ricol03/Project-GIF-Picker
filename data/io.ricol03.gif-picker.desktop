@@ -3,8 +3,8 @@ Version=1.0
 Type=Application
 
 Name=GIF Picker
-Comment=Proves that we can use Vala and Gtk
-Categories=Development;Education;
+Comment=Local GIF library for clipboard copying
+Categories=Development;
 
 Icon=gifpicker-small
 Exec=io.ricol03.gif-picker
