@@ -6,7 +6,7 @@ Name=GIF Picker
 Comment=Proves that we can use Vala and Gtk
 Categories=Development;Education;
 
-Icon=io.ricol03.gif-picker
+Icon=gifpicker-small
 Exec=io.ricol03.gif-picker
 Terminal=false
 StartupNotify=true

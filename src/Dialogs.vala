@@ -6,13 +6,13 @@
 public class Dialogs {
 	public Dialogs() {}
     
-    public async File openFolderDialog(Gtk.ApplicationWindow main_window) {
+    public async File openFolderDialog(Gtk.ApplicationWindow mainwindow) {
     	var dialog = new Gtk.FileDialog();
 		dialog.title = "Open Folder";
 		File file = null;
 
 		try {
-			file = yield dialog.select_folder(main_window, null);
+			file = yield dialog.select_folder(mainwindow, null);
 			return file;
 		} catch (Error e) {
 			warning("- %s".printf(e.message));

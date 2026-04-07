@@ -28,59 +28,28 @@ public class Files {
 		return current;
 	}
 
-	public void setRevealerStatus(string text) {
-		if (getFileLines() >= 2) {
-			string content;
-			FileUtils.get_contents(Path.build_filename(configDir, directory, filename), out content);
-
-			string[] lines = content.split("\n");
-
-			int target = 1;
-
-			if (target < lines.length) {
-				lines[target] = text;
-			}
-
-			string new_content = string.joinv("\n", lines);
-
-			FileUtils.set_contents(Path.build_filename(configDir, directory, filename), new_content);
-		} else {
-			try {
-				var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
-				var stream = file.append_to(FileCreateFlags.NONE);
-
-				stream.write(text.data);
-				stream.close();
-			} catch (Error e) {
-				warning(e.message.to_string());
-			}
-		}
-	}
-
-	public string getRevealerStatus() {
-		string? line = null;
-		try {
-			var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
-			var dis = new DataInputStream(file.read());
-
-			int target_line = 2;
-			int current = 1;
-
-			while ((line = dis.read_line(null)) != null) {
-				if (current == target_line)
-				    break;
-
-				current++;
-			}
-		} catch (Error e) {
-			warning(e.message);
-		}
-
-		return line;
-	}
-
 	public File getFile(string path) {
 		return File.new_for_path(path);
+	}
+
+	public string? getSetting(string key) {
+		File file = checkSettingsFile();
+		if (file.query_exists()) {
+			try {
+				string content;
+				FileUtils.get_contents(file.get_path(), out content);
+
+				foreach (string line in content.split("\n")) {
+					if (line.has_prefix(key + "=")) {
+						return line.substring((key + "=").length);
+					}
+				}
+			} catch (Error e) {
+				warning(e.message);
+			}
+		}
+
+		return null;
 	}
 
 	public void createSettingsDirectory() {
@@ -98,7 +67,6 @@ public class Files {
 	}
 
 	public File checkSettingsFile() {
-
 		string settingsPath = Path.build_filename(configDir, directory, filename);
 
 		File file = File.new_for_path(settingsPath);
@@ -107,26 +75,43 @@ public class Files {
 
 	public void createSettingsFile() {
 		File file = checkSettingsFile();
-
-		if (!file.query_exists()) {
+		if (!file.query_exists())
 			FileUtils.set_contents(file.get_path(), null);
-		}
 	}
 
-	public void saveSettingsFile(string text) {
+	public void saveSettingsFile(string key, string text) {
 		File file = checkSettingsFile();
-		FileOutputStream newfile = null;
+		string content = "";
+		bool found = false;
 
-		if (!file.query_exists(null)) {
-			newfile = file.replace(null, true, FileCreateFlags.PRIVATE, null);
-		} else {
-			newfile = file.create(FileCreateFlags.PRIVATE, null);
+		try {
+			if (file.query_exists())
+				FileUtils.get_contents(file.get_path(), out content);
+
+			string[] lines = content.split("\n");
+			string newcontent = "";
+
+			foreach (string line in lines) {
+				string stripped = line.strip();
+
+				if (stripped == "")
+					continue;
+
+				if (stripped.has_prefix(key + "=")) {
+					newcontent += key + "=" + text + "\n";
+					found = true;
+				} else {
+					newcontent += stripped + "\n";
+				}
+			}
+
+			if (!found)
+				newcontent += key + "=" + text + "\n";
+
+			FileUtils.set_contents(file.get_path(), newcontent);
+		} catch (Error e) {
+			warning(e.message);
 		}
-
-		FileUtils.set_contents(file.get_path(), text);
-
-		newfile.write(text.data);
-		newfile.close();
 	}
 
 	public async string[] createFileIndex(string folderPath) {
@@ -142,8 +127,9 @@ public class Files {
 		        if (files == null || files.length() == 0)
 		            break;
 
-		        foreach (var info in files)
-		            filePaths += info.get_name();
+		        foreach (var info in files) {
+		            filePaths += folderPath + "/" + info.get_name();
+				}
 		    }
         	yield e.close_async();
 		} catch (Error e) {
@@ -153,16 +139,8 @@ public class Files {
 		return filePaths;
 	}
 
-	public signal void index_ready(string[] paths);
-
-	public void getIndex(string folderPath) {
-		createFileIndex.begin(folderPath, (obj, res) => {
-		    try {
-		        var paths = createFileIndex.end(res);
-		        index_ready(paths);
-		    } catch (Error e) {
-		        warning(e.message);
-		    }
-		});
+	public async string[] getIndex(string folderPath) {
+		string[] paths = yield createFileIndex(folderPath);
+		return paths;
 	}
 }

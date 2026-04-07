@@ -14,7 +14,8 @@ public class About {
 		about.set_modal(true);
 
 		about.set_program_name("GIF Picker");
-		about.set_version("0.1");
+		about.set_version("0.1.0");
+		about.set_logo_icon_name("gifpicker");
 		about.set_comments("Easily accessible GIF picker for your local library");
 		about.set_website("https://github.com/ricol03/Project-GIF-Picker");
 

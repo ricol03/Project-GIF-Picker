@@ -13,18 +13,30 @@ project_gif_picker_sources = [
     'src' / 'GlobalShortcut.vala',
     'src' / 'Main.vala',
     'src' / 'Tray.vala',
+    'src' / 'Settings.vala',
     'src' / 'Window.vala',
 ]
 
-gres = files('src/project-gif-picker.gresource.xml')
+gresource = gnome.compile_resources(
+    'gresource',
+    'data' / 'gresource.xml',
+    source_dir: 'data'
+)
 
-project_gif_picker_sources += gnome.compile_resources('project-gif-picker-resources',
-  gres
+install_data(
+    'data' / 'io.ricol03.gif-picker.desktop',
+    install_dir: get_option('datadir') / 'applications'
+)
+
+install_data(
+  	'data' / 'gifpicker-small.svg',
+	install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
 
 executable(
     meson.project_name(),
     project_gif_picker_sources,
+    gresource,
     dependencies: [
         dependency('gtk4'),
         dependency('gtk4-wayland'),
@@ -37,7 +49,3 @@ executable(
 )
 
 
-install_data(
-    'data' / 'io.ricol03.gif-picker.desktop',
-    install_dir: get_option('datadir') / 'applications'
-)

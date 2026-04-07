@@ -36,6 +36,22 @@ public class Application : Gtk.Application {
 		set_accels_for_action("app.quit", new string[] {"<Control>q", "<Control>w"});
 		quit_action.activate.connect(quit);
 
+		var about_action = new SimpleAction("about", null);
+
+		add_action(about_action);
+		set_accels_for_action("app.about", new string[] {"<Control>o"});
+		about_action.activate.connect(() => {
+			about.createWindow(window);
+		});
+
+		var settings_action = new SimpleAction("settings", null);
+
+		add_action(settings_action);
+		set_accels_for_action("app.settings", new string[] {"<Control>s"});
+		settings_action.activate.connect(() => {
+			var settings = new Settings(this, window);
+		});
+
 		var refresh_action = new SimpleAction("refresh", null);
 
 		add_action(refresh_action);
@@ -67,14 +83,6 @@ public class Application : Gtk.Application {
 			window.nextPage();
 		});
 
-		var about_action = new SimpleAction("about", null);
-
-		add_action(about_action);
-		set_accels_for_action("app.about", new string[] {"<Control>o"});
-		about_action.activate.connect(() => {
-			about.createWindow(window);
-		});
-
 		var search_action = new SimpleAction("search", null);
 
 		add_action(search_action);
@@ -104,24 +112,6 @@ public class Application : Gtk.Application {
 		files.createSettingsDirectory();
 		files.createSettingsFile();
 
-		bool hasIndex = false;
-
-		File file = files.checkSettingsFile();
-		if (file.query_exists()) {
-			try {
-				var dis = new DataInputStream(file.read());
-				string line = dis.read_line(null);
-
-				if (line != null) {
-					folder = files.getFile(line);
-					hasIndex = true;
-				}
-
-			} catch (Error e) {
-				warning(e.message);
-			}
-		}
-
-		window = new Window(this, hasIndex, folder);
+		window = new Window(this);
  	}
 }

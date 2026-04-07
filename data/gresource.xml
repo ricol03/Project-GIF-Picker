@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="io/ricol03/gifpicker/icons">
+    <file compressed="true" preprocess="xml-stripblanks">gifpicker.svg</file>
+	<file compressed="true" preprocess="xml-stripblanks">gifpicker-small.svg</file>
+  </gresource>
+</gresources>

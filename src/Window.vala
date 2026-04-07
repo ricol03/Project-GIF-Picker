@@ -3,7 +3,6 @@
  * ricol03, 2026
  ****/
 
-[GtkTemplate (ui = "/io/ricol03/gifpicker/window.ui")]
 public class Window : Gtk.ApplicationWindow {
 	private Gtk.Application application = new Application();
 	private Dialogs dialog = new Dialogs();
@@ -13,6 +12,7 @@ public class Window : Gtk.ApplicationWindow {
 	private string[] filePaths;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "GIF Picker";
+	private Gtk.IconTheme theme;
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
 	private bool hasindex = false;
@@ -20,7 +20,8 @@ public class Window : Gtk.ApplicationWindow {
 	private Gdk.Cursor cursorDefault = new Gdk.Cursor.from_name("default", null);
 	private Gtk.StringList model = new Gtk.StringList(null);
 
-	private int visibleStart = 0;
+	private uint visibleStart = 0;
+	private uint totalitems = 0;
 
 	private Gtk.SliceListModel slice = null;
     private int offset = 0;
@@ -33,6 +34,7 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.Button searchbtn = null;
 	private Gtk.GridView grid = null;
 	private Gtk.SignalListItemFactory factory = null;
+	private Gtk.FilterListModel filtered = null;
 	private Gtk.SingleSelection selection = null;
 	private Gtk.CustomFilter customfilter = null;
 
@@ -45,17 +47,21 @@ public class Window : Gtk.ApplicationWindow {
 
 	private string env = null;
 
-    public Window(Gtk.Application app, bool index, File? fileFolder) {
+    public Window(Gtk.Application app) {
 		application = app;
-		hasindex = index;
-		folder = fileFolder;
+
+		filterbtn.set_sensitive(false);
+		var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
+		//Gtk.IconTheme.add_search_path(icontheme, )
 
 		env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
 		if (env != "GNOME")
 			createSysTrayIcon();
 
+		Gtk.Window.set_default_icon_name("gifpicker-small");
+
 		createMenuOptions();
-		setWindowState();
+		setWindowState(null);
 
 		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		mainbox.append(centerbox);
@@ -76,7 +82,8 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainwindow.present();
 
-		entry.search_changed.connect(() => {
+		entry.changed.connect(() => {
+			returnToFirstPage();
 			filter = entry.get_text().down().strip();
 
 			if (filter == "")
@@ -85,6 +92,8 @@ public class Window : Gtk.ApplicationWindow {
 				customfilter.changed(Gtk.FilterChange.DIFFERENT);
 
 			slice.set_offset(0);
+
+			checkNextButton((int)totalitems);
 		});
 
 		mainwindow.close_request.connect(() => {
@@ -101,20 +110,51 @@ public class Window : Gtk.ApplicationWindow {
 		//  		    string parent_id = "wayland:" + handle;
 		//  		    shortcuts.init.begin();
 		//  		});
-		//  	} else 
+		//  	} else
 		//  		shortcuts.init.begin();
 		//  });
     }
 
-    public void setWindowState() {
-		if (hasindex) {
-			files.getIndex(folder.get_path());
+    public void refreshState() {
+		string? filePath = files.getSetting("path");
 
-			files.index_ready.connect((paths) => {
-				filePaths = paths;
+		if (filePath == null || filePath.strip() == "")
+			return;
+
+		folder = files.getFile(filePath);
+		hasindex = true;
+
+		files.getIndex.begin(filePath, (obj, res) => {
+			try {
+				filePaths = files.getIndex.end(res);
+
 				setModel();
-				setFactory();
 				setGifList();
+			} catch (Error e) {
+				warning(e.message);
+			}
+		});
+	}
+
+    public void setWindowState(string[]? newfilePaths) {
+		string filePath = files.getSetting("path");
+
+		if (filePath != null) {
+			folder = files.getFile(filePath);
+			hasindex = true;
+		}
+
+		if (hasindex) {
+			files.getIndex.begin(filePath, (obj, res) => {
+				try {
+					filePaths = files.getIndex.end(res);
+					totalitems = filePaths.length;
+					setModel();
+					setFactory();
+					setGifList();
+				} catch (Error e) {
+					warning(e.message);
+				}
 			});
 		} else
 			setWindowContent();
@@ -136,7 +176,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(search);
 
-		string status = files.getRevealerStatus();
+		string status = files.getSetting("revealer");
 		if (status == null || status == "true" ) {
 			setRevealer();
 		}
@@ -146,7 +186,7 @@ public class Window : Gtk.ApplicationWindow {
 		grid.set_max_columns(2);
 
 		grid.activate.connect((position) => {
-			var item = model.get_item(position) as Gtk.StringObject;
+			var item = selection.get_model().get_item(position) as Gtk.StringObject;
 			var filename = item.get_string();
 
 			setClipboard(filename);
@@ -165,6 +205,8 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
     public void setFactory() {
+		factory = new Gtk.SignalListItemFactory();
+
 		factory.setup.connect((obj) => {
 			var listitem = (Gtk.ListItem)obj;
 			var picture = new Gtk.Picture();
@@ -200,7 +242,9 @@ public class Window : Gtk.ApplicationWindow {
 		factory.bind.connect((obj) => {
 			var listitem = (Gtk.ListItem)obj;
 			var stringitem = (Gtk.StringObject)listitem.get_item();
-			var filename = stringitem.get_string();
+
+			var filepath = stringitem.get_string();
+			string filename = Path.get_basename(filepath);
 
 			var box = (Gtk.Box)listitem.get_child();
 			box.set_focusable(true);
@@ -208,27 +252,15 @@ public class Window : Gtk.ApplicationWindow {
 			var picture = (Gtk.Picture)box.get_first_child();
 			var label = (Gtk.Label)box.get_last_child();
 
-			uint id = gif.makeGifsSmall(picture, folder.get_path() + "/" + filename);
+			uint id = gif.makeGifsSmall(picture, filepath);
 
 			picture.set_data("gif-timeout", id);
 
 			label.set_label(filename);
 
-			var key = new Gtk.EventControllerKey();
-
-			key.key_pressed.connect((keyval, keycode, state) => {
-				if (keyval == Gdk.Key.Return || keyval == Gdk.Key.space) {
-					setClipboard(filename);
-					return true;
-				}
-
-				return false;
-			});
-			box.add_controller(key);
-
 			var gesture = new Gtk.GestureClick();
 			gesture.pressed.connect((n_press, x, y) => {
-				setClipboard(filename);
+				setClipboard(filepath);
 			});
 			box.add_controller(gesture);
 
@@ -254,7 +286,7 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
 	public void setClipboard(string filename) {
-		var file = File.new_for_path(folder.get_path() + "/" + filename);
+		var file = File.new_for_path(filename);
 
 		string? etag;
 		Bytes bytes = file.load_bytes(null, out etag);
@@ -271,7 +303,7 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
 	public void setRevealer() {
-		files.setRevealerStatus("true");
+		files.saveSettingsFile("revealer", "true");
 		revealer = new Gtk.Revealer();
 		revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN);
 		revealer.set_reveal_child(false);
@@ -290,16 +322,18 @@ public class Window : Gtk.ApplicationWindow {
 			label.set_markup("A different keyboard shortcut can be set to show/hide the window. <a href='openwindow'>Click here.</a>");
 
 		label.activate_link.connect((uri) => {
-			if (uri == "openwindow")
-				warning("settings window here");
-
+			if (uri == "openwindow") {
+				var settings = new Settings(application, this);
+				revealer.set_reveal_child(false);
+				files.saveSettingsFile("revealer", "false");
+			}
 			return true;
 		});
 
 		var close_btn = new Gtk.Button.from_icon_name("window-close-symbolic");
 		close_btn.clicked.connect(() => {
 			revealer.set_reveal_child(false);
-			files.setRevealerStatus("false");
+			files.saveSettingsFile("revealer", "false");
 		});
 
 		banner.append(label);
@@ -326,6 +360,9 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
     public void setModel() {
+		string[] empty = {};
+		model.splice(0, model.get_n_items(), empty);
+
 		for (int i = 0; i < filePaths.length; i++)
 			model.append(filePaths[i]);
 
@@ -335,13 +372,14 @@ public class Window : Gtk.ApplicationWindow {
 			if (filter == "")
 				return true;
 
-			if (item.get_string().down().contains(filter))
-				warning(item.get_string());
-
 			return item.get_string().down().contains(filter);
 		});
 
-		var filtered = new Gtk.FilterListModel(model, customfilter);
+		filtered = new Gtk.FilterListModel(model, customfilter);
+
+		filtered.items_changed.connect((position, removed, added) => {
+			totalitems = filtered.get_n_items();
+		});
 
 		slice = new Gtk.SliceListModel(
 			filtered,
@@ -349,15 +387,20 @@ public class Window : Gtk.ApplicationWindow {
 			sliceSize
 		);
 
-		selection = new Gtk.SingleSelection(slice);
+		if (visibleStart >= totalitems && totalitems > 0) {
+			visibleStart = ((totalitems - 1) / sliceSize) * sliceSize;
+		}
 
-		factory = new Gtk.SignalListItemFactory();
+		slice.set_offset(visibleStart);
+		slice.set_size((uint) sliceSize);
+
+		selection = new Gtk.SingleSelection(slice);
 	}
 
     public void setWindowContent() {
 		searchbtn.set_sensitive(false);
 		refreshbtn.set_sensitive(false);
-		filterbtn.set_sensitive(false);
+
 		backbtn.set_sensitive(false);
 		nextbtn.set_sensitive(false);
 
@@ -397,12 +440,24 @@ public class Window : Gtk.ApplicationWindow {
 		    folder = yield dialog.openFolderDialog(mainwindow);
 			if (folder != null) {
 				hasindex = true;
-				files.saveSettingsFile(folder.get_path());
-				setWindowState();
+				files.saveSettingsFile("path", folder.get_path());
+				setWindowState(null);
 			}
 		} catch (Error e) {
 		    warning("No folder selected");
 		}
+	}
+
+	public void returnToFirstPage() {
+		while (offset != 0) {
+			offset -= sliceSize;
+		}
+
+		slice.set_offset(offset);
+		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
+
+		checkBackButton();
+		checkNextButton((int)totalitems);
 	}
 
 	public void backPage() {
@@ -411,7 +466,7 @@ public class Window : Gtk.ApplicationWindow {
  		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
 
 		checkBackButton();
-		checkNextButton();
+		checkNextButton((int)totalitems);
 	}
 
 	public void nextPage() {
@@ -420,7 +475,7 @@ public class Window : Gtk.ApplicationWindow {
  		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
 
 		checkBackButton();
-		checkNextButton();
+		checkNextButton((int)totalitems);
 	}
 
 	public void checkBackButton() {
@@ -434,9 +489,10 @@ public class Window : Gtk.ApplicationWindow {
 		}
 	}
 
-	public void checkNextButton() {
+	public void checkNextButton(int length) {
+		warning("número: " + length.to_string());
 		var action = (SimpleAction)application.lookup_action("next");
-		if (offset + sliceSize > filePaths.length) {
+		if (offset + sliceSize >= length) {
 			nextbtn.set_sensitive(false);
 			action.set_enabled(false);
 		} else {
@@ -498,7 +554,7 @@ public class Window : Gtk.ApplicationWindow {
 	private void createMenuOptions() {
 		var menubox = new Menu();
 
-		menubox.append("Open File...", "app.open");
+		menubox.append("Settings", "app.settings");
 		menubox.append("About", "app.about");
 		menubox.append("Quit", "app.quit");
 
@@ -511,6 +567,7 @@ public class Window : Gtk.ApplicationWindow {
 			icon_name = "filter-symbolic",
 		};
 		filterbtn.set_tooltip_markup("Filter");
+		filterbtn.set_sensitive(false);
 
 		searchbtn = new Gtk.Button() {
 			icon_name = "search-symbolic",
