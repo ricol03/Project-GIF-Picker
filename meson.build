@@ -1,4 +1,4 @@
-project('io.ricol03.gif-picker',
+project('io.ricol03.gifpicker',
     'vala', 'c'
 )
 
@@ -10,7 +10,8 @@ project_gif_picker_sources = [
     'src' / 'Dialogs.vala',
     'src' / 'Files.vala',
     'src' / 'Gif.vala',
-    'src' / 'GlobalShortcut.vala',
+    #'src' / 'GlobalShortcut.vala',
+    'src' / 'Logs.vala',
     'src' / 'Main.vala',
     'src' / 'Tray.vala',
     'src' / 'Settings.vala',
@@ -24,7 +25,7 @@ gresource = gnome.compile_resources(
 )
 
 install_data(
-    'data' / 'io.ricol03.gif-picker.desktop',
+    'data' / 'io.ricol03.gifpicker.desktop',
     install_dir: get_option('datadir') / 'applications'
 )
 
@@ -39,7 +40,7 @@ executable(
     gresource,
     dependencies: [
         dependency('gtk4'),
-        dependency('gtk4-wayland'),
+        #dependency('gtk4-wayland'),
         dependency('gio-2.0'),
         dependency('glib-2.0'),
         dependency('gobject-2.0'),

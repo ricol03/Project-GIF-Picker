@@ -4,6 +4,9 @@
  ****/
 
 public class Settings {
+	private Logs logs = new Logs();
+	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+
 	private Files files = new Files();
 	private Dialogs dialogs = new Dialogs();
 	private Gtk.Application application;
@@ -12,6 +15,7 @@ public class Settings {
 	private bool clickedbutton = false;
 
 	public Settings(Gtk.Application app, Window window) {
+		logs.writeToLog(new datetime.now_local().to_string() + " : opened settings\n");
 
 		Gtk.Box box = new Gtk.Box(Gtk.Orientation.VERTICAL, 10) {
 			margin_top = 24,
@@ -49,10 +53,12 @@ public class Settings {
 			dialogs.openFolderDialog.begin(window, (obj, res) => {
 				try {
 					newfile = dialogs.openFolderDialog.end(res);
-					if (newfile != null)
+					if (newfile != null) {
 						pathentry.set_text(newfile.get_path());
+						logs.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
+					}
 				} catch (Error e) {
-					warning(e.message);
+					logs.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
 				}
 			});
 		});
@@ -87,6 +93,7 @@ public class Settings {
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
+			logs.writeToLog(new datetime.now_local().to_string() + " : closed settings via close button\n");
 			mainwindow.destroy();
 		});
 
@@ -94,6 +101,7 @@ public class Settings {
 		applybutton.set_label("Apply");
 
 		applybutton.clicked.connect(() => {
+			logs.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
 			files.saveSettingsFile("path", pathentry.get_text());
 			files.saveSettingsFile("revealer", "false");
 			clickedbutton = true;
@@ -121,6 +129,7 @@ public class Settings {
 			if (clickedbutton)
 				window.refreshState();
 			
+			logs.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
 			mainwindow.destroy();
 			return true;
 		});

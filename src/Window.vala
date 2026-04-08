@@ -4,6 +4,9 @@
  ****/
 
 public class Window : Gtk.ApplicationWindow {
+	private Logs logs = new Logs();
+	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+
 	private Gtk.Application application = new Application();
 	private Dialogs dialog = new Dialogs();
 	private Gif gif = new Gif();
@@ -93,11 +96,18 @@ public class Window : Gtk.ApplicationWindow {
 			slice.set_offset(0);
 
 			checkNextButton((int)totalitems);
+
+			logs.writeToLog(new datetime.now_local().to_string() + " : filter changed -> " + filter + "\n");
 		});
 
+		// TODO: after having a global tray icon / keyboard shortcut working
 		mainwindow.close_request.connect(() => {
-			mainwindow.hide();
-			return true;
+			logs.writeToLog( new datetime.now_local().to_string() + " : closed app\n");
+			logs.writeToLog("////////////////////////// finished run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n\n");
+
+		 	//mainwindow.hide();
+		 	mainwindow.destroy();
+		 	return true;
 		});
 
 		//  var shortcuts = new GlobalShortcut(mainwindow);
@@ -130,9 +140,11 @@ public class Window : Gtk.ApplicationWindow {
 				setModel();
 				setGifList();
 			} catch (Error e) {
-				warning(e.message);
+				logs.writeToLog(new datetime.now_local().to_string() + " : (refreshState)" + e.message + "\n");
 			}
 		});
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : window state refreshed\n");
 	}
 
     public void setWindowState(string[]? newfilePaths) {
@@ -152,11 +164,13 @@ public class Window : Gtk.ApplicationWindow {
 					setFactory();
 					setGifList();
 				} catch (Error e) {
-					warning(e.message);
+					logs.writeToLog(new datetime.now_local().to_string() + " : (setWindowState) " + e.message + "\n");
 				}
 			});
 		} else
 			setWindowContent();
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : window state set\n");
 	}
 
     public void setGifList() {
@@ -175,21 +189,23 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(search);
 
-		string status = files.getSetting("revealer");
-		if (status == null || status == "true" ) {
-			setRevealer();
-		}
+		//string status = files.getSetting("revealer");
+		//if (status == null || status == "true" ) {
+		//	setRevealer();
+		//}
 
 		grid = new Gtk.GridView(selection, factory);
 		grid.set_min_columns(2);
 		grid.set_max_columns(2);
 
-		grid.activate.connect((position) => {
-			var item = selection.get_model().get_item(position) as Gtk.StringObject;
-			var filename = item.get_string();
+		// grid.activate.connect((position) => {
+		// 	var item = selection.get_model().get_item(position) as Gtk.StringObject;
+		// 	var filename = item.get_string();
 
-			setClipboard(filename);
-		});
+		// 	logs.writeToLog(new datetime.now_local().to_string() + " : gif clicked -> " + filename + "\n");
+
+		// 	setClipboard(filename);
+		// });
 
 		var scrolled = new Gtk.ScrolledWindow();
 		scrolled.set_min_content_height(200);
@@ -197,10 +213,12 @@ public class Window : Gtk.ApplicationWindow {
 		scrolled.set_vexpand(true);
 		scrolled.set_child(grid);
 
-		if (revealer != null)
-			mainbox.append(revealer);
+		//if (revealer != null)
+		//	mainbox.append(revealer);
 
 		mainbox.append(scrolled);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : gif list set\n");
 	}
 
     public void setFactory() {
@@ -259,6 +277,7 @@ public class Window : Gtk.ApplicationWindow {
 
 			var gesture = new Gtk.GestureClick();
 			gesture.pressed.connect((n_press, x, y) => {
+				logs.writeToLog(new datetime.now_local().to_string() + " : gif clicked -> " + filename + "\n");
 				setClipboard(filepath);
 			});
 			box.add_controller(gesture);
@@ -282,6 +301,8 @@ public class Window : Gtk.ApplicationWindow {
 
 			picture.set_paintable(null);
 		});
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : factory set\n");
 	}
 
 	public void setClipboard(string filename) {
@@ -299,6 +320,8 @@ public class Window : Gtk.ApplicationWindow {
 		var display = Gdk.Display.get_default();
 		var clipboard = display.get_clipboard();
 		clipboard.set_content(provider);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : clipboard set -> " + filename + "\n");
 	}
 
 	public void setRevealer() {
@@ -394,6 +417,8 @@ public class Window : Gtk.ApplicationWindow {
 		slice.set_size((uint) sliceSize);
 
 		selection = new Gtk.SingleSelection(slice);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : model set\n");
 	}
 
     public void setWindowContent() {
@@ -432,6 +457,8 @@ public class Window : Gtk.ApplicationWindow {
 		centerbox.set_center_widget(contentbox);
 
 		mainbox.append(centerbox);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : window content set\n");
 	}
 
     public async void getFolder() {
@@ -443,7 +470,7 @@ public class Window : Gtk.ApplicationWindow {
 				setWindowState(null);
 			}
 		} catch (Error e) {
-		    warning("No folder selected");
+		   	logs.writeToLog(new datetime.now_local().to_string() + " : (getFolder) " + e.message + "\n");
 		}
 	}
 
@@ -457,6 +484,8 @@ public class Window : Gtk.ApplicationWindow {
 
 		checkBackButton();
 		checkNextButton((int)totalitems);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : return to first page\n");
 	}
 
 	public void backPage() {
@@ -466,6 +495,8 @@ public class Window : Gtk.ApplicationWindow {
 
 		checkBackButton();
 		checkNextButton((int)totalitems);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : back page\n");
 	}
 
 	public void nextPage() {
@@ -475,6 +506,8 @@ public class Window : Gtk.ApplicationWindow {
 
 		checkBackButton();
 		checkNextButton((int)totalitems);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : next page\n");
 	}
 
 	public void checkBackButton() {
@@ -503,9 +536,13 @@ public class Window : Gtk.ApplicationWindow {
 		if (isSearchActive) {
 			search.set_search_mode(false);
 			isSearchActive = false;
+
+			logs.writeToLog(new datetime.now_local().to_string() + " : search mode inactive\n");
 		} else {
 			search.set_search_mode(true);
 			isSearchActive = true;
+
+			logs.writeToLog(new datetime.now_local().to_string() + " : search mode active\n");
 		}
 	}
 
@@ -545,7 +582,7 @@ public class Window : Gtk.ApplicationWindow {
 			);
 
 		} catch (Error e) {
-			warning(e.message);
+			logs.writeToLog(new datetime.now_local().to_string() + " : (createSysTrayIcon)" + e.message + "\n");
 		}
 	}
 
@@ -600,6 +637,8 @@ public class Window : Gtk.ApplicationWindow {
 		headerbar.pack_end(menubtn);
 		headerbar.pack_end(filterbtn);
 		headerbar.pack_end(refreshbtn);
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : menu options created\n");
 	}
 
 	public void messagebox() {

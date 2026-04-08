@@ -1,10 +1,13 @@
-_build/
+bin/
 build/
-.vscode/
+build-flatpak/
+build-win/
 builddir/
-io.github.ricol03.gtk-test.yml
+repo/
+
 .flatpak-builder
-.buildconfig
+.vscode/
+
 src/bin/
 src/share/
 src/GlobalShortcut.vala

@@ -1,10 +1,10 @@
-id: io.ricol03.gif-picker
+id: io.ricol03.gifpicker
 
 runtime: org.gnome.Platform
 runtime-version: '50'
 sdk: org.gnome.Sdk
 
-command: io.ricol03.gif-picker
+command: io.ricol03.gifpicker
 
 finish-args:
   - '--share=ipc'
@@ -12,7 +12,7 @@ finish-args:
   - '--socket=wayland'
 
 modules:
-  - name: gif-picker
+  - name: gifpicker
     buildsystem: meson
     sources:
       - type: dir

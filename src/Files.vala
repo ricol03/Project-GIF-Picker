@@ -4,9 +4,12 @@
  ****/
 
 public class Files {
+	private Logs logs = new Logs();
+
 	private string configDir = Environment.get_user_config_dir();
 	private string directory = "io.ricol03.gifpicker";
 	private string filename = "settings.conf";
+	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	public Files() {}
 
@@ -22,7 +25,7 @@ public class Files {
 				current++;
 
 		} catch (Error e) {
-			warning(e.message);
+			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
 		}
 
 		return current;
@@ -41,11 +44,12 @@ public class Files {
 
 				foreach (string line in content.split("\n")) {
 					if (line.has_prefix(key + "=")) {
+						logs.writeToLog(new datetime.now_local().to_string() + " : setting retrieved: " + key + " - " + line.substring((key + "=").length) + "\n");
 						return line.substring((key + "=").length);
 					}
 				}
 			} catch (Error e) {
-				warning(e.message);
+				logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
 			}
 		}
 
@@ -60,10 +64,12 @@ public class Files {
 		if (!dir.query_exists()) {
 			try {
 				dir.make_directory_with_parents();
+				logs.writeToLog(new datetime.now_local().to_string() + " : created directory -> " + dirPath + "\n");
 			} catch (Error e) {
-				warning(e.message);
+				logs.writeToLog(new datetime.now_local().to_string()+ " " + e.message);
 			}
-		}
+		} else
+			logs.writeToLog(new datetime.now_local().to_string() + " : directory already exists -> " + dirPath + "\n");
 	}
 
 	public File checkSettingsFile() {
@@ -75,8 +81,11 @@ public class Files {
 
 	public void createSettingsFile() {
 		File file = checkSettingsFile();
-		if (!file.query_exists())
+		if (!file.query_exists()) {
 			FileUtils.set_contents(file.get_path(), null);
+			logs.writeToLog(new datetime.now_local().to_string() + " : created settings file\n");
+		} else
+			logs.writeToLog(new datetime.now_local().to_string() + " : settings file already exists\n");
 	}
 
 	public void saveSettingsFile(string key, string text) {
@@ -110,7 +119,7 @@ public class Files {
 
 			FileUtils.set_contents(file.get_path(), newcontent);
 		} catch (Error e) {
-			warning(e.message);
+			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
 		}
 	}
 
@@ -133,7 +142,7 @@ public class Files {
 		    }
         	yield e.close_async();
 		} catch (Error e) {
-			warning(e.message);
+			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
 		}
 
 		return filePaths;

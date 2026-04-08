@@ -6,6 +6,9 @@
 public class About {
 	private Gtk.AboutDialog about;
 
+	private Logs logs = new Logs();
+	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+
 	public About() {}
 
 	public void createWindow(Gtk.ApplicationWindow window) {
@@ -22,5 +25,7 @@ public class About {
 		about.set_authors({ "ricol03" });
 
 		about.present();
+
+		logs.writeToLog(new datetime.now_local().to_string() + " : about window created\n");
 	}
 }

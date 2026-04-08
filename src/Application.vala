@@ -6,6 +6,8 @@
 using Gdk;
 
 public class Application : Gtk.Application {
+	private Logs logs = new Logs();
+
 	private Dialogs dialog = new Dialogs();
 	private Files files = new Files();
 	private About about = new About();
@@ -108,6 +110,9 @@ public class Application : Gtk.Application {
 
     protected override void activate() {
 		base.activate();
+		logs.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
+		var datetime = new GLib.DateTime.now_local();
+		logs.writeToLog(new datetime.now_local().to_string() + " : started app\n");
 
 		files.createSettingsDirectory();
 		files.createSettingsFile();
