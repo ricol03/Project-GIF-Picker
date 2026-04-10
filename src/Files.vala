@@ -137,7 +137,8 @@ public class Files {
 		            break;
 
 		        foreach (var info in files) {
-		            filePaths += folderPath + "/" + info.get_name();
+					if (info.get_name().contains(".gif"))
+		           		filePaths += folderPath + "/" + info.get_name();
 				}
 		    }
         	yield e.close_async();

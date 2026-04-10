@@ -120,7 +120,7 @@ public class Settings {
 			default_width = 480,
 			title = windowtitle
 		};
-		mainwindow.set_transient_for(window);
+		mainwindow.set_transient_for(null);
 		mainwindow.set_resizable(false);
 		
 		mainwindow.present();

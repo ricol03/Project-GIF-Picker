@@ -4,8 +4,12 @@
 This GTK app pretends to be a small but effective tool to have a local GIF library easily accessible. It allows the user to copy the pretended GIF to the clipboard, as well as to search through the library, to effectively go through large folders.
 
 ## Screenshots
-![Main window and about box](doc/ss.png)
 
+### Fedora Linux on GNOME 50 
+![Main window and about box](doc/ss-1.png)
+
+### Windows 10
+![Main window and winver](doc/ss-2.png)
 
 ## Building
 Generically, the process uses Ninja, Meson and valac, so make sure to have these installed. As for the commands themselves, make sure to have the necessary dependencies installed and build the Meson project as normal.
@@ -28,5 +32,16 @@ Next do ```cd <your build directory e.g. builddir>``` followed by ```ninja``` or
 
 To install it permanently on your system, run:
 
-```meson install -C <your build directory>```
+```meson install -C <your build directory e.g. builddir>```
+
+### Microsoft Windows (cross-compilation)
+
+Depending on your Linux distro, or whether you're using WSL or MSYS2, make sure to have meson, ninja and valac installed. From there, use the windows-cross.txt file and do the following command:
+
+```meson setup <your build directory e.g. builddir> --cross-file windows-cross.txt```
+
+From there, just compile as normal:
+
+```meson compile -C <your build directory e.g. builddir>```
+
 

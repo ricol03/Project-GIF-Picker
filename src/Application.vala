@@ -49,7 +49,7 @@ public class Application : Gtk.Application {
 		var settings_action = new SimpleAction("settings", null);
 
 		add_action(settings_action);
-		set_accels_for_action("app.settings", new string[] {"<Control>s"});
+		set_accels_for_action("app.settings", new string[] {"<Control>t"});
 		settings_action.activate.connect(() => {
 			var settings = new Settings(this, window);
 		});
@@ -92,6 +92,8 @@ public class Application : Gtk.Application {
 		search_action.activate.connect(() => {
 			window.toggleSearchBar();
 		});
+		
+		
 
 		//  var toggle_action = new SimpleAction("toggle", null);
 

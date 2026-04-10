@@ -3,6 +3,7 @@ build/
 build-flatpak/
 build-win/
 builddir/
+dist/
 repo/
 
 .flatpak-builder

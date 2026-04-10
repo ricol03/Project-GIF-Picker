@@ -4,6 +4,12 @@
  ****/
 
 public class Window : Gtk.ApplicationWindow {
+
+	#if WINDOWS
+		[CCode (cname = "setWindowsClipboard", cheader_filename = "WinClipboard.h")]
+		private extern static int setWindowsClipboardNative(string filepath);
+	#endif
+
 	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
@@ -53,6 +59,21 @@ public class Window : Gtk.ApplicationWindow {
     public Window(Gtk.Application app) {
 		application = app;
 
+		#if WINDOWS
+		GLib.Environment.set_variable("GTK_CSD", "0", false);
+		GLib.Environment.set_variable("GSK_RENDERER", "cairo", false);
+		//GLib.Environment.set_variable("GSETTINGS_SCHEMAS_DIR", , false);
+		#endif
+
+		var css = new Gtk.CssProvider ();
+		css.load_from_resource ("/io/ricol03/gifpicker/style/style.css");
+
+		Gtk.StyleContext.add_provider_for_display (
+			Gdk.Display.get_default (),
+			css,
+			Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+		);
+
 		filterbtn.set_sensitive(false);
 		var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
 
@@ -68,6 +89,44 @@ public class Window : Gtk.ApplicationWindow {
 		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		mainbox.append(centerbox);
 
+		#if WINDOWS
+		mainwindow = new Gtk.ApplicationWindow(app) {
+			child = mainbox,
+			default_height = 480,
+			default_width = 640,
+			title = windowtitle
+		};
+
+		var menubar = new Menu();
+
+		var filemenu = new Menu();
+		filemenu.append("Refresh", "app.refresh");
+		filemenu.append("Quit", "app.quit");
+
+		var navmenu = new Menu();
+		navmenu.append("Back", "app.back");
+		navmenu.append("Next", "app.next");
+
+		var searchmenu = new Menu();
+		searchmenu.append("Search", "app.search");
+
+		var settingsmenu = new Menu();
+		settingsmenu.append("Settings", "app.settings");
+
+		var helpmenu = new Menu();
+		helpmenu.append("About", "app.about");
+
+		menubar.append_submenu("File", filemenu);
+		menubar.append_submenu("Navigation", navmenu);
+		menubar.append_submenu("Search", searchmenu);
+		menubar.append_submenu("Settings", settingsmenu);
+		menubar.append_submenu("Help", helpmenu);
+
+		application.set_menubar(menubar);
+
+		mainwindow.set_show_menubar(true);
+
+		#else
 		mainwindow = new Gtk.ApplicationWindow(app) {
 			child = mainbox,
 			titlebar = headerbar,
@@ -75,7 +134,10 @@ public class Window : Gtk.ApplicationWindow {
 			default_width = 640,
 			title = windowtitle
 		};
+		#endif
+
 		mainwindow.set_resizable(false);
+		mainwindow.set_decorated(true);
 
 		var entry = new Gtk.SearchEntry();
 		search.set_child(entry);
@@ -278,6 +340,9 @@ public class Window : Gtk.ApplicationWindow {
 			var gesture = new Gtk.GestureClick();
 			gesture.pressed.connect((n_press, x, y) => {
 				logs.writeToLog(new datetime.now_local().to_string() + " : gif clicked -> " + filename + "\n");
+				#if WINDOWS
+					filepath = filepath.replace("/", "\\");
+				#endif
 				setClipboard(filepath);
 			});
 			box.add_controller(gesture);
@@ -306,20 +371,23 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
 	public void setClipboard(string filename) {
-		var file = File.new_for_path(filename);
+		#if WINDOWS
+		    int ok = setWindowsClipboardNative(filename);
+			logs.writeToLog(new datetime.now_local().to_string() + " : clipboard return code -> " + ok.to_string() + "\n");
+		#else
+		    var file = File.new_for_path (filename);
+		    string? etag;
+		    Bytes bytes = file.load_bytes (null, out etag);
 
-		string? etag;
-		Bytes bytes = file.load_bytes(null, out etag);
+		    var provider = new Gdk.ContentProvider.union ({
+		        new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+		        new Gdk.ContentProvider.for_value(file)
+		    });
 
-		var provider = new Gdk.ContentProvider.union({
-			new Gdk.ContentProvider.for_bytes("image/gif", bytes),
-			new Gdk.ContentProvider.for_bytes("application/octet-stream", bytes),
-			new Gdk.ContentProvider.for_value(file)
-		});
-
-		var display = Gdk.Display.get_default();
-		var clipboard = display.get_clipboard();
-		clipboard.set_content(provider);
+		    var display = Gdk.Display.get_default ();
+		    var clipboard = display.get_clipboard ();
+		    clipboard.set_content (provider);
+		#endif
 
 		logs.writeToLog(new datetime.now_local().to_string() + " : clipboard set -> " + filename + "\n");
 	}
