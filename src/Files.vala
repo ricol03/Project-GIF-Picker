@@ -137,8 +137,10 @@ public class Files {
 		            break;
 
 		        foreach (var info in files) {
-					if (info.get_name().contains(".gif"))
+					if (info.get_name().contains(".gif")) {
 		           		filePaths += folderPath + "/" + info.get_name();
+						logs.writeToLog(new datetime.now_local().to_string() + " : added to index -> " + info.get_name() + "\n");
+		            }
 				}
 		    }
         	yield e.close_async();

@@ -6,7 +6,7 @@
 public class Window : Gtk.ApplicationWindow {
 
 	#if WINDOWS
-		[CCode (cname = "setWindowsClipboard", cheader_filename = "WinClipboard.h")]
+		[CCode (cname = "setWindowsClipboard", cheader_filename = "windows/WinClipboard.h")]
 		private extern static int setWindowsClipboardNative(string filepath);
 	#endif
 
@@ -77,9 +77,9 @@ public class Window : Gtk.ApplicationWindow {
 		filterbtn.set_sensitive(false);
 		var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
 
-		env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
-		if (env != "GNOME")
-			createSysTrayIcon();
+		// env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
+		// if (env != "GNOME")
+		// 	createSysTrayIcon();
 
 		Gtk.Window.set_default_icon_name("gifpicker-small");
 
@@ -614,45 +614,45 @@ public class Window : Gtk.ApplicationWindow {
 		}
 	}
 
-	private void createSysTrayIcon() {
-		try {
-			var bus = Bus.get_sync(BusType.SESSION);
-			var tray = new Tray(mainwindow);
+	// private void createSysTrayIcon() {
+	// 	try {
+	// 		var bus = Bus.get_sync(BusType.SESSION);
+	// 		var tray = new Tray(mainwindow);
 
-			Bus.own_name(
-				BusType.SESSION,
-				"io.ricol03.gifpicker",
-				BusNameOwnerFlags.NONE,
-				(conn, name) => { print("Bus acquired\n"); },
-				(conn, name) => {
-					print("Name acquired\n");
+	// 		Bus.own_name(
+	// 			BusType.SESSION,
+	// 			"io.ricol03.gifpicker",
+	// 			BusNameOwnerFlags.NONE,
+	// 			(conn, name) => { print("Bus acquired\n"); },
+	// 			(conn, name) => {
+	// 				print("Name acquired\n");
 
-					conn.register_object("/StatusNotifierItem", tray);
+	// 				conn.register_object("/StatusNotifierItem", tray);
 
-					var proxy = new DBusProxy.sync(
-						conn,
-						DBusProxyFlags.NONE,
-						null,
-						"org.kde.StatusNotifierWatcher",
-						"/StatusNotifierWatcher",
-						"org.kde.StatusNotifierWatcher",
-						null
-					);
+	// 				var proxy = new DBusProxy.sync(
+	// 					conn,
+	// 					DBusProxyFlags.NONE,
+	// 					null,
+	// 					"org.kde.StatusNotifierWatcher",
+	// 					"/StatusNotifierWatcher",
+	// 					"org.kde.StatusNotifierWatcher",
+	// 					null
+	// 				);
 
-					proxy.call_sync(
-						"RegisterStatusNotifierItem",
-						new Variant("(s)", "/StatusNotifierItem"),
-						DBusCallFlags.NONE,
-						-1
-					);
-				},
-				(conn, name) => { print("Name lost\n"); }
-			);
+	// 				proxy.call_sync(
+	// 					"RegisterStatusNotifierItem",
+	// 					new Variant("(s)", "/StatusNotifierItem"),
+	// 					DBusCallFlags.NONE,
+	// 					-1
+	// 				);
+	// 			},
+	// 			(conn, name) => { print("Name lost\n"); }
+	// 		);
 
-		} catch (Error e) {
-			logs.writeToLog(new datetime.now_local().to_string() + " : (createSysTrayIcon)" + e.message + "\n");
-		}
-	}
+	// 	} catch (Error e) {
+	// 		logs.writeToLog(new datetime.now_local().to_string() + " : (createSysTrayIcon)" + e.message + "\n");
+	// 	}
+	// }
 
 	private void createMenuOptions() {
 		var menubox = new Menu();

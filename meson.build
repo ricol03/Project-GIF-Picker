@@ -19,13 +19,13 @@ project_gif_picker_sources = [
     #'src' / 'GlobalShortcut.vala',
     'src' / 'Logs.vala',
     'src' / 'Main.vala',
-    'src' / 'Tray.vala',
+    #'src' / 'Tray.vala',
     'src' / 'Settings.vala',
     'src' / 'Window.vala',
 ]
 
 if host_machine.system() == 'windows'
-	project_gif_picker_sources += files('src/WinClipboard.c')
+	project_gif_picker_sources += files('src/windows/WinClipboard.c')
 	add_project_arguments('-D', 'WINDOWS', language: 'vala')
 endif
 
