@@ -2,6 +2,7 @@ bin/
 build/
 build-flatpak/
 build-win/
+build-winarm32/
 builddir/
 dist/
 repo/

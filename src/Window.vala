@@ -24,6 +24,7 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.IconTheme theme;
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
+	private Gtk.ScrolledWindow scrolled = new Gtk.ScrolledWindow();
 	private bool hasindex = false;
 	private Gdk.Cursor cursorHand = new Gdk.Cursor.from_name("pointer", null);
 	private Gdk.Cursor cursorDefault = new Gdk.Cursor.from_name("default", null);
@@ -146,6 +147,8 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainwindow.present();
 
+		var messagebox = new Gtk.CenterBox();
+
 		entry.changed.connect(() => {
 			returnToFirstPage();
 			filter = entry.get_text().down().strip();
@@ -158,6 +161,39 @@ public class Window : Gtk.ApplicationWindow {
 			slice.set_offset(0);
 
 			checkNextButton((int)totalitems);
+
+			bool checkMessage = false;
+
+			if (totalitems == 0) {
+				for (var child = mainbox.get_first_child(); child != null; child = child.get_next_sibling()) {
+					if (child == messagebox)
+						checkMessage = true;
+				}
+
+				mainbox.remove(scrolled);
+
+				if (checkMessage == false) {
+
+					var text = new Gtk.Label("No search results available. Try a different query.");
+
+					messagebox.set_hexpand(true);
+					messagebox.set_vexpand(true);
+
+					var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+
+					contentbox.set_valign(Gtk.Align.CENTER);
+
+					contentbox.append(text);
+
+					messagebox.set_center_widget(contentbox);
+
+					mainbox.append(messagebox);
+				}
+
+			} else {
+				mainbox.remove(messagebox);
+				mainbox.append(scrolled);
+			}
 
 			logs.writeToLog(new datetime.now_local().to_string() + " : filter changed -> " + filter + "\n");
 		});
@@ -200,6 +236,7 @@ public class Window : Gtk.ApplicationWindow {
 				filePaths = files.getIndex.end(res);
 
 				setModel();
+				setFactory();
 				setGifList();
 			} catch (Error e) {
 				logs.writeToLog(new datetime.now_local().to_string() + " : (refreshState)" + e.message + "\n");
@@ -212,7 +249,7 @@ public class Window : Gtk.ApplicationWindow {
     public void setWindowState(string[]? newfilePaths) {
 		string filePath = files.getSetting("path");
 
-		if (filePath != null) {
+		if (filePath != null && filePath != "") {
 			folder = files.getFile(filePath);
 			hasindex = true;
 		}
@@ -269,7 +306,7 @@ public class Window : Gtk.ApplicationWindow {
 		// 	setClipboard(filename);
 		// });
 
-		var scrolled = new Gtk.ScrolledWindow();
+
 		scrolled.set_min_content_height(200);
 		scrolled.set_hexpand(true);
 		scrolled.set_vexpand(true);
@@ -285,6 +322,8 @@ public class Window : Gtk.ApplicationWindow {
 
     public void setFactory() {
 		factory = new Gtk.SignalListItemFactory();
+
+		string labelMode = files.getSetting("labels");
 
 		factory.setup.connect((obj) => {
 			var listitem = (Gtk.ListItem)obj;
@@ -335,7 +374,20 @@ public class Window : Gtk.ApplicationWindow {
 
 			picture.set_data("gif-timeout", id);
 
-			label.set_label(filename);
+			int length = filename.length;
+			if (labelMode == "0") {
+				if (length > 32) {
+					string newfilename = filename[0:29] + "[...]" + filename[length - 4: length];
+					label.set_label(newfilename);
+				} else
+					label.set_label(filename);
+			} else {
+				if (length > 36) {
+					string newfilename = filename[0:35] + "[...]";
+					label.set_label(newfilename);
+				} else
+					label.set_label(filename[0:length - 4]);
+			}
 
 			var gesture = new Gtk.GestureClick();
 			gesture.pressed.connect((n_press, x, y) => {

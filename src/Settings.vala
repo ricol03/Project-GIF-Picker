@@ -71,7 +71,12 @@ public class Settings {
 		string[] options = {"Complete name", "Complete name w/o extension"};
 
 		var closeswitch = new Gtk.DropDown.from_strings(options);
-		closeswitch.set_sensitive(false);
+
+		if (file.query_exists()) {
+			var num = files.getSetting("labels");
+			closeswitch.set_selected(int.parse(num));
+		}
+
 		var closerow = makeRow("Label presentation", closeswitch);
 
 		generalbox.append(pathentryrow);
@@ -102,8 +107,10 @@ public class Settings {
 
 		applybutton.clicked.connect(() => {
 			logs.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
+
 			files.saveSettingsFile("path", pathentry.get_text());
 			files.saveSettingsFile("revealer", "false");
+			files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
 			clickedbutton = true;
 		});
 

@@ -9,7 +9,7 @@ public class About {
 	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
-	private string version = "0.1.1-r2";
+	private string version = "0.2.0-dev";
 
 	public About() {}
 
@@ -27,7 +27,7 @@ public class About {
 		about.set_authors({ "ricol03" });
 
 		string[] people =
-		{"Yubiyub", "Coro", "Unrealism", "merrit"};
+		{"Bird", "Yubiyub", "Coro", "Unrealism", "merrit"};
 
 		about.add_credit_section("Testing by", people);
 
