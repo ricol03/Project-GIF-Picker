@@ -16,6 +16,7 @@ project_gif_picker_sources = [
     'src' / 'Dialogs.vala',
     'src' / 'Files.vala',
     'src' / 'Gif.vala',
+    'src' / 'Gifs.vala',
     #'src' / 'GlobalShortcut.vala',
     'src' / 'Logs.vala',
     'src' / 'Main.vala',
@@ -52,9 +53,11 @@ executable(
     dependencies: [
         dependency('gtk4'),
         #dependency('gtk4-wayland'),
+        dependency('gee-0.8'),
         dependency('gio-2.0'),
         dependency('glib-2.0'),
         dependency('gobject-2.0'),
+        dependency('json-glib-1.0'),
         #dependency('libportal')
     ],
     include_directories: inc,

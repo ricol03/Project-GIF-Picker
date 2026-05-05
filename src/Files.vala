@@ -5,13 +5,28 @@
 
 public class Files {
 	private Logs logs = new Logs();
+	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	private string configDir = Environment.get_user_config_dir();
 	private string directory = "io.ricol03.gifpicker";
 	private string filename = "settings.conf";
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	public Files() {}
+
+	public bool hasFileContent(string filePath) {
+		try {
+		    var file = File.new_for_path(filePath);
+
+		    if (!file.query_exists())
+		        return false;
+
+		    var info = file.query_info("standard::size", 0);
+		    return info.get_size() > 0;
+
+		} catch (Error e) {
+		    return false;
+		}
+	}
 
 	public int getFileLines() {
 		string? line = null;
@@ -77,6 +92,11 @@ public class Files {
 
 		File file = File.new_for_path(settingsPath);
 		return file;
+	}
+
+	public void createFile(string filePath) {
+		FileUtils.set_contents(filePath, "");
+		logs.writeToLog(new datetime.now_local().to_string() + " : created file named " + filePath + "\n");
 	}
 
 	public void createSettingsFile() {

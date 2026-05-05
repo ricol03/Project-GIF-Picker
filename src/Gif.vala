@@ -4,22 +4,65 @@
  ****/
 
 public class Gif {
+	private string fileName;
+	private string displayName;
+	private bool isFavorite = false;
+	private GLib.DateTime dateTime = new GLib.DateTime.now_local();
 
 	public Gif() {}
 
-	public uint makeGifsSmall(Gtk.Picture picture, string filePath) {
-		var animation = new Gdk.PixbufAnimation.from_file(filePath);
-		var iter = animation.get_iter(null);
+	public Json.Node saveJson() {
+		var builder = new Json.Builder();
 
-		uint id = Timeout.add(iter.get_delay_time(), () => {
-			if (iter.advance(null)) {
-				var texture = Gdk.Texture.for_pixbuf(iter.get_pixbuf());
-				picture.set_paintable(texture);
-			}
+		builder.begin_object();
 
-			return true;
-		});
+		builder.set_member_name("fileName");
+		builder.add_string_value(fileName);
 
-		return id;
+		builder.set_member_name("displayName");
+		builder.add_string_value(displayName);
+
+		builder.set_member_name("isFavorite");
+		builder.add_boolean_value(isFavorite);
+
+		builder.set_member_name("dateTime");
+		builder.add_string_value(dateTime.to_string());
+
+		builder.end_object();
+
+		return builder.get_root();
 	}
+
+	public static Gif loadJson(Json.Object obj) {
+		var gif = new Gif();
+
+		if (obj.has_member("fileName"))
+		    gif.fileName = obj.get_string_member("fileName");
+
+		if (obj.has_member("displayName"))
+		    gif.displayName = obj.get_string_member("displayName");
+
+		if (obj.has_member("isFavorite"))
+		    gif.isFavorite = obj.get_boolean_member("isFavorite");
+
+		// if (obj.has_member("dateTime")) {
+		//     gif.dateTime = obj.get_string_member("dateTime").date;
+		// 	GLib.DateTime.
+		// }
+
+		return gif;
+	}
+
+	public string getFileName() {
+		return fileName;
+	}
+
+	public void setFileName(string newFileName) {
+		fileName = newFileName;
+	}
+
+	public void setDisplayName(string newDisplayName) {
+		displayName = newDisplayName;
+	}
+
 }
