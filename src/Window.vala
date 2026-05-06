@@ -24,6 +24,7 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "GIF Picker";
 	private Gtk.IconTheme theme;
+	private Gtk.Stack stack = new Gtk.Stack();
 	private Gtk.Box mainbox;
 	private Gtk.CenterBox centerbox;
 	private Gtk.ScrolledWindow scrolled = new Gtk.ScrolledWindow();
@@ -42,20 +43,27 @@ public class Window : Gtk.ApplicationWindow {
     private int offset = 0;
     private int sliceSize = 8;
 
+	private Gtk.MenuButton menubtn = null;
 	private Gtk.Button refreshbtn = null;
 	private Gtk.Button filterbtn = null;
 	private Gtk.Button backbtn = null;
 	private Gtk.Button nextbtn = null;
-	private Gtk.Button searchbtn = null;
-	private Gtk.Button favoritebtn = null;
+	private Gtk.ToggleButton searchbtn = null;
+	private Gtk.ToggleButton favoritebtn = null;
 	private Gtk.GridView grid = null;
 	private Gtk.SignalListItemFactory factory = null;
 	private Gtk.FilterListModel filtered = null;
+	private Gtk.FilterListModel favoritesfiltered = null;
 	private Gtk.SingleSelection selection = null;
+	private Gtk.SingleSelection favoritesselection = null;
 	private Gtk.CustomFilter customfilter = null;
+	private Gtk.CustomFilter favoritesfilter = null;
+
+	private bool hasFavoriteView = false;
 
 	private Gtk.SearchBar search = new Gtk.SearchBar();
 	private bool isSearchActive = false;
+	private bool isFavoriteActive = false;
 
 	private Gtk.HeaderBar headerbar = null;
 	private string filter = "";
@@ -100,9 +108,25 @@ public class Window : Gtk.ApplicationWindow {
 		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		mainbox.append(centerbox);
 
+		stack.set_transition_type(Gtk.StackTransitionType.SLIDE_UP_DOWN);
+		stack.set_transition_duration(250);
+
+		stack.set_hexpand(true);
+		stack.set_vexpand(true);
+
+		stack.add_named(mainbox, "main");
+
+		var panel = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+		panel.add_css_class("panel");
+		stack.add_named(panel, "panel");
+
+		stack.set_visible_child_name("main");
+
+		//window.set_child(stack);
+
 		#if WINDOWS
 		mainwindow = new Gtk.ApplicationWindow(app) {
-			child = mainbox,
+			child = stack,
 			default_height = 480,
 			default_width = 640,
 			title = windowtitle
@@ -139,7 +163,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		#else
 		mainwindow = new Gtk.ApplicationWindow(app) {
-			child = mainbox,
+			child = stack,
 			titlebar = headerbar,
 			default_height = 480,
 			default_width = 640,
@@ -257,7 +281,6 @@ public class Window : Gtk.ApplicationWindow {
 			} else
 				hasjson = false;
 		}
-
 	}
 
     public void refreshState() {
@@ -352,7 +375,6 @@ public class Window : Gtk.ApplicationWindow {
 							gif.file_name = path;
 							gif.display_name = Path.get_basename(path);
 							gifList[i] = gif;
-							//warning(gif.getFileName());
 						}
 					}
 
@@ -379,6 +401,7 @@ public class Window : Gtk.ApplicationWindow {
 		backbtn.set_action_name("app.back");
 		nextbtn.set_action_name("app.next");
 		refreshbtn.set_action_name("app.refresh");
+		favoritebtn.set_action_name("app.favorite");
 
 		checkBackButton();
 
@@ -513,6 +536,7 @@ public class Window : Gtk.ApplicationWindow {
 
 			button.clicked.connect(() => {
 				gif.is_favorite = !gif.is_favorite;
+				favoritesfilter.changed(Gtk.FilterChange.DIFFERENT);
 
 				button.set_icon_name(
 					gif.is_favorite ? "starred-symbolic" : "non-starred-symbolic"
@@ -635,22 +659,11 @@ public class Window : Gtk.ApplicationWindow {
 
     public void setModel() {
 		string[] empty = {};
-		//model.splice(0, model.get_n_items(), empty);
-
-		// for (int i = 0; i < gifList.length; i++)
-		// 	model.append(gifList[i].getFileName());
-
-		//model.splice(0, model.get_n_items(), new Gee.ArrayList<GObject>());
-
 		model.remove_all();
 
 		foreach (var gif in gifList) {
 			model.append(gif);
 		}
-
-		// for (int i = 0; i < gifList.length; i++) {
-		// 	model.append(gifList[i]);
-		// }
 
 		customfilter = new Gtk.CustomFilter((obj) => {
 			var gif = obj as Gif;
@@ -666,6 +679,21 @@ public class Window : Gtk.ApplicationWindow {
 		filtered.items_changed.connect((position, removed, added) => {
 			totalitems = filtered.get_n_items();
 		});
+
+		favoritesfilter = new Gtk.CustomFilter((obj) => {
+			var gif = obj as Gif;
+			return gif.is_favorite;
+		});
+
+		favoritesfiltered = new Gtk.FilterListModel(model, favoritesfilter);
+
+		var favoritesslice = new Gtk.SliceListModel(
+			favoritesfiltered,
+			0,
+			sliceSize
+		);
+
+		favoritesselection = new Gtk.SingleSelection(favoritesfiltered);
 
 		slice = new Gtk.SliceListModel(
 			filtered,
@@ -688,6 +716,7 @@ public class Window : Gtk.ApplicationWindow {
     public void setWindowContent() {
 		searchbtn.set_sensitive(false);
 		refreshbtn.set_sensitive(false);
+		favoritebtn.set_sensitive(false);
 
 		backbtn.set_sensitive(false);
 		nextbtn.set_sensitive(false);
@@ -731,7 +760,8 @@ public class Window : Gtk.ApplicationWindow {
 			if (folder != null) {
 				hasindex = true;
 				files.saveSettingsFile("path", folder.get_path());
-				setWindowState(null);
+				gifs.loadGifs();
+				refreshState();
 			}
 		} catch (Error e) {
 		   	logs.writeToLog(new datetime.now_local().to_string() + " : (getFolder) " + e.message + "\n");
@@ -757,7 +787,6 @@ public class Window : Gtk.ApplicationWindow {
         slice.set_offset(offset);
  		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
 
-
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
@@ -768,7 +797,6 @@ public class Window : Gtk.ApplicationWindow {
 		offset += sliceSize;
         slice.set_offset(offset);
  		grid.scroll_to(0, Gtk.ListScrollFlags.NONE, null);
-
 
 		checkBackButton();
 		checkNextButton((int)totalitems);
@@ -799,18 +827,76 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
 	public void toggleSearchBar() {
-		if (isSearchActive) {
+		if (searchbtn.get_active()) {
 			search.set_search_mode(false);
-			isSearchActive = false;
+			searchbtn.set_active(false);
 
 			logs.writeToLog(new datetime.now_local().to_string() + " : search mode inactive\n");
 		} else {
 			search.set_search_mode(true);
-			isSearchActive = true;
+			searchbtn.set_active(true);
 
 			logs.writeToLog(new datetime.now_local().to_string() + " : search mode active\n");
 		}
 	}
+
+	public void updateFavoritePanel() {
+		favoritesfilter.changed(Gtk.FilterChange.DIFFERENT);
+
+		if (favoritebtn.get_active()) {
+			stack.set_visible_child_name("main");
+			mainwindow.set_title("GIF Picker");
+			favoritebtn.set_active(false);
+			checkBackButton();
+			checkNextButton((int)totalitems);
+			searchbtn.set_sensitive(true);
+			refreshbtn.set_sensitive(true);
+			filterbtn.set_sensitive(true);
+			menubtn.set_sensitive(true);
+			logs.writeToLog(new datetime.now_local().to_string() + " : favorite panel inactive\n");
+		} else {
+			stack.set_visible_child_name("panel");
+			var panel = (Gtk.Box)stack.visible_child;
+			favoritebtn.set_active(true);
+			backbtn.set_sensitive(false);
+			nextbtn.set_sensitive(false);
+			searchbtn.set_sensitive(false);
+			refreshbtn.set_sensitive(false);
+			filterbtn.set_sensitive(false);
+			menubtn.set_sensitive(false);
+			favoritesfilter.changed(Gtk.FilterChange.DIFFERENT);
+
+			if (favoritesselection.get_n_items() == 0) {
+				var label = new Gtk.Label("No favourites to show. Please, add favourite GIFs.");
+				var messagebox = new Gtk.CenterBox();
+				panel.remove(panel.get_first_child());
+				messagebox.set_hexpand(true);
+				messagebox.set_vexpand(true);
+				var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+				contentbox.set_valign(Gtk.Align.CENTER);
+				contentbox.append(label);
+				messagebox.set_center_widget(contentbox);
+				panel.append(messagebox);
+			} else {
+				if (!hasFavoriteView) {
+					var favoritesview = new Gtk.GridView(favoritesselection, factory);
+					favoritesview.set_min_columns(3);
+					favoritesview.set_max_columns(3);
+					var scrolled = new Gtk.ScrolledWindow();
+					scrolled.set_min_content_height(200);
+					scrolled.set_hexpand(true);
+					scrolled.set_vexpand(true);
+					scrolled.set_child(favoritesview);
+					panel.append(scrolled);
+					hasFavoriteView = true;
+				}
+			}
+
+			mainwindow.set_title("Favourite list");
+			logs.writeToLog(new datetime.now_local().to_string() + " : favorite panel active\n");
+		}
+	}
+
 
 	// private void createSysTrayIcon() {
 	// 	try {
@@ -870,7 +956,7 @@ public class Window : Gtk.ApplicationWindow {
 		filterbtn.set_tooltip_markup("Filter");
 		filterbtn.set_sensitive(false);
 
-		searchbtn = new Gtk.Button() {
+		searchbtn = new Gtk.ToggleButton() {
 			icon_name = "search-symbolic",
 		};
 		searchbtn.set_tooltip_markup("Search <span alpha='70%'>(Ctrl+S)</span>");
@@ -885,13 +971,12 @@ public class Window : Gtk.ApplicationWindow {
 		};
 		nextbtn.set_tooltip_markup("Next <span alpha='70%'>(Alt+N)</span>");
 
-		favoritebtn = new Gtk.Button() {
+		favoritebtn = new Gtk.ToggleButton() {
 			icon_name = "starred-symbolic",
 		};
 		favoritebtn.set_tooltip_markup("Favourite <span alpha='70%'>(Ctrl+F)</span>");
-		favoritebtn.set_sensitive(false);
 
-		var menubtn = new Gtk.MenuButton() {
+		menubtn = new Gtk.MenuButton() {
 			icon_name = "open-menu-symbolic",
 			primary = true,
 		};

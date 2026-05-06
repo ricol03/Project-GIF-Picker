@@ -93,7 +93,13 @@ public class Application : Gtk.Application {
 			window.toggleSearchBar();
 		});
 		
-		
+		var favorite_action = new SimpleAction("favorite", null);
+
+		add_action(favorite_action);
+		set_accels_for_action("app.favorite", new string[] {"<Control>f"});
+		favorite_action.activate.connect(() => {
+			window.updateFavoritePanel();
+		});
 
 		//  var toggle_action = new SimpleAction("toggle", null);
 
