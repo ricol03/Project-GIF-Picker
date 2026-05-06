@@ -3,10 +3,10 @@
  * ricol03, 2026
  ****/
 
-public class Gif {
-	private string fileName;
-	private string displayName;
-	private bool isFavorite = false;
+public class Gif : Object {
+	public string file_name { get; set; }
+	public string display_name { get; set; }
+	public bool is_favorite { get; set; default = false; }
 	private GLib.DateTime dateTime = new GLib.DateTime.now_local();
 
 	public Gif() {}
@@ -17,13 +17,13 @@ public class Gif {
 		builder.begin_object();
 
 		builder.set_member_name("fileName");
-		builder.add_string_value(fileName);
+		builder.add_string_value(file_name);
 
 		builder.set_member_name("displayName");
-		builder.add_string_value(displayName);
+		builder.add_string_value(display_name);
 
 		builder.set_member_name("isFavorite");
-		builder.add_boolean_value(isFavorite);
+		builder.add_boolean_value(is_favorite);
 
 		builder.set_member_name("dateTime");
 		builder.add_string_value(dateTime.to_string());
@@ -37,13 +37,13 @@ public class Gif {
 		var gif = new Gif();
 
 		if (obj.has_member("fileName"))
-		    gif.fileName = obj.get_string_member("fileName");
+		    gif.file_name = obj.get_string_member("fileName");
 
 		if (obj.has_member("displayName"))
-		    gif.displayName = obj.get_string_member("displayName");
+		    gif.display_name = obj.get_string_member("displayName");
 
 		if (obj.has_member("isFavorite"))
-		    gif.isFavorite = obj.get_boolean_member("isFavorite");
+		    gif.is_favorite = obj.get_boolean_member("isFavorite");
 
 		// if (obj.has_member("dateTime")) {
 		//     gif.dateTime = obj.get_string_member("dateTime").date;
@@ -53,16 +53,16 @@ public class Gif {
 		return gif;
 	}
 
-	public string getFileName() {
-		return fileName;
-	}
+	// public string getFileName() {
+	// 	return fileName;
+	// }
 
-	public void setFileName(string newFileName) {
-		fileName = newFileName;
-	}
+	// public void setFileName(string newFileName) {
+	// 	fileName = newFileName;
+	// }
 
-	public void setDisplayName(string newDisplayName) {
-		displayName = newDisplayName;
-	}
+	// public void setDisplayName(string newDisplayName) {
+	// 	displayName = newDisplayName;
+	// }
 
 }

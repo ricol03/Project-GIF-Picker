@@ -10,7 +10,7 @@ public class Gifs {
 	private Files files = new Files();
 	private string configDir = Environment.get_user_config_dir();
 	private string directory = "io.ricol03.gifpicker";
-	private string filename = "gifs";
+	private string filename = "index";
 	private string filePath;
 
 	public Gifs(string dirName) {
@@ -18,9 +18,7 @@ public class Gifs {
 	}
 
 	public string createDirs(string? dirName) {
-		//if (file)
-		filePath = Path.build_filename(configDir, directory, filename + dirName + ".json");
-		warning("ai: " + filePath);
+		filePath = Path.build_filename(configDir, directory, dirName + "-" + filename + ".json");
 		return filePath;
 	}
 
@@ -44,7 +42,6 @@ public class Gifs {
 		logs.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
 		var parser = new Json.Parser();
 		if (!File.new_for_path(filePath).query_exists()) {
-			logs.writeToLog(new datetime.now_local().to_string() + " : nem sei\n");
 			files.createFile(filePath);
 		}
 
