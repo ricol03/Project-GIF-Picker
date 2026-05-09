@@ -98,7 +98,7 @@ public class Application : Gtk.Application {
 		add_action(favorite_action);
 		set_accels_for_action("app.favorite", new string[] {"<Control>f"});
 		favorite_action.activate.connect(() => {
-			window.updateFavoritePanel();
+			window.toggleFavoritePanel();
 		});
 
 		//  var toggle_action = new SimpleAction("toggle", null);

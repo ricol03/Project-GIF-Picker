@@ -3,7 +3,7 @@ Version=0.1
 Type=Application
 
 Name=GIF Picker
-Comment=Local GIF library for clipboard copying
+Comment=Local GIF library for clipboard copying and management
 Categories=Development;
 
 Icon=gifpicker-small

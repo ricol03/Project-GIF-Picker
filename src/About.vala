@@ -9,7 +9,7 @@ public class About {
 	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
-	private string version = "0.2.0-dev";
+	private string version = "0.2.0";
 
 	public About() {}
 
@@ -20,7 +20,18 @@ public class About {
 
 		about.set_program_name("GIF Picker");
 		about.set_version(version);
-		about.set_logo_icon_name("gifpicker");
+
+		try {
+			var texture = Gdk.Texture.from_resource(
+				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/gifpicker.png"
+			);
+
+			about.set_logo(texture);
+
+		} catch (Error e) {
+			warning(e.message);
+		}
+
 		about.set_comments("Easily accessible GIF picker for your local library");
 		about.set_website("https://github.com/ricol03/Project-GIF-Picker");
 

@@ -17,8 +17,15 @@ public class Gifs {
 		createDirs(dirName);
 	}
 
-	public string createDirs(string? dirName) {
-		filePath = Path.build_filename(configDir, directory, dirName + "-" + filename + ".json");
+	public string createDirs(string name) {
+		string safeName = Path.get_basename(name);
+
+		filePath = Path.build_filename(
+		    configDir,
+		    directory,
+		    safeName + "-" + filename + ".json"
+		);
+
 		return filePath;
 	}
 

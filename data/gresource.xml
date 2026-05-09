@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-	<gresource prefix="io/ricol03/gifpicker/icons">
-    	<file compressed="true" preprocess="xml-stripblanks">gifpicker.svg</file>
-		<file compressed="true" preprocess="xml-stripblanks">gifpicker-small.svg</file>
-  	</gresource>
+	<gresource prefix="/io/ricol03/gifpicker/icons">
+    	<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/gifpicker.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/gifpicker-small.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/document-edit-symbolic.svg</file>
+    	<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/starred-symbolic.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/non-starred-symbolic.svg</file>
+  		<file>icons/hicolor/scalable/actions/gifpicker.png</file>
+	</gresource>
 	<gresource prefix="/io/ricol03/gifpicker/style">
     	<file>style.css</file>
   	</gresource>

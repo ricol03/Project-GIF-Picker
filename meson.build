@@ -42,7 +42,7 @@ install_data(
 )
 
 install_data(
-  	'data' / 'gifpicker-small.svg',
+  	'data/icons/hicolor/scalable/actions/' / 'gifpicker-small.svg',
 	install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps'
 )
 
@@ -52,12 +52,12 @@ executable(
     gresource,
     dependencies: [
         dependency('gtk4'),
-        #dependency('gtk4-wayland'),
-        dependency('gee-0.8'),
         dependency('gio-2.0'),
         dependency('glib-2.0'),
         dependency('gobject-2.0'),
         dependency('json-glib-1.0'),
+
+        #dependency('gtk4-wayland'),
         #dependency('libportal')
     ],
     include_directories: inc,

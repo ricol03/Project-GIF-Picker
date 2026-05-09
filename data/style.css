@@ -9,5 +9,11 @@
 /* } */
 
 .favourite-button {
-    background-color: black;
+    background-color: #000000;
+    transition: 200ms;
+}
+
+.favourite-button:hover {
+	background-color: #2B2B2B;
+    opacity: 1.0;
 }
