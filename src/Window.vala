@@ -279,23 +279,22 @@ public class Window : Gtk.ApplicationWindow {
 		//  });
     }
 
-    public string convertedFileName() {
-		string path = files.getSetting("path");
+	public string convertedFileName() {
+		string? path = files.getSetting("path");
 
-		if (path != "") {
-			string[] splits = path.split("/");
-			string fileName = splits[splits.length - 1];
-			string convertedName = fileName.down();
-			if (convertedName.contains(" ")) {
-				convertedName = convertedName.replace(" ", "-");
-			}
+		if (path == null || path.strip() == "")
+			return "";
 
-			gifs = new Gifs(convertedName);
-			return gifs.createDirs(convertedName);
-		}
+		string fileName = Path.get_basename(path);
+		string convertedName = fileName.down();
 
-		return "";
+		if (convertedName.contains(" "))
+			convertedName = convertedName.replace(" ", "-");
+
+		gifs = new Gifs(convertedName);
+		return gifs.createDirs(convertedName);
 	}
+
 
     public void loadingFromFile() {
 		string filePath = convertedFileName();

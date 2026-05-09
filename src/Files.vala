@@ -102,7 +102,7 @@ public class Files {
 	public void createSettingsFile() {
 		File file = checkSettingsFile();
 		if (!file.query_exists()) {
-			FileUtils.set_contents(file.get_path(), null);
+			FileUtils.set_contents(file.get_path(), "");
 			logs.writeToLog(new datetime.now_local().to_string() + " : created settings file\n");
 		} else
 			logs.writeToLog(new datetime.now_local().to_string() + " : settings file already exists\n");

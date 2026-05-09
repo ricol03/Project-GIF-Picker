@@ -9,7 +9,7 @@ public class About {
 	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
-	private string version = "0.2.0";
+	private string version = "0.2.1";
 
 	public About() {}
 
