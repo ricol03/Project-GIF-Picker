@@ -59,14 +59,10 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.FilterListModel favoritesfiltered = null;
 	private Gtk.SingleSelection selection = null;
 	private Gtk.SingleSelection favoritesselection = null;
-	private Gtk.CustomFilter customfilter = null;
+	private Gtk.CustomFilter defaultfilter = null;
 	private Gtk.CustomFilter favoritesfilter = null;
 
-	private bool hasFavoriteView = false;
-
 	private Gtk.SearchBar search = new Gtk.SearchBar();
-	private bool isSearchActive = false;
-	private bool isFavoriteActive = false;
 
 	private Gtk.HeaderBar headerbar = null;
 	private string filter = "";
@@ -74,7 +70,7 @@ public class Window : Gtk.ApplicationWindow {
 
 	private string env = null;
 
-	private string path = null;
+
 
     public Window(Gtk.Application app) {
 		application = app;
@@ -115,7 +111,7 @@ public class Window : Gtk.ApplicationWindow {
 		//#endif
 
 		createMenuOptions();
-		setWindowState(null);
+		refreshState();
 
 		mainbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		mainbox.append(centerbox);
@@ -209,14 +205,16 @@ public class Window : Gtk.ApplicationWindow {
 
 		var messagebox = new Gtk.CenterBox();
 
+
+		// when the user searches
 		entry.changed.connect(() => {
 			returnToFirstPage();
 			filter = entry.get_text().down().strip();
 
 			if (filter == "")
-				customfilter.changed(Gtk.FilterChange.LESS_STRICT);
+				defaultfilter.changed(Gtk.FilterChange.LESS_STRICT);
 			else
-				customfilter.changed(Gtk.FilterChange.DIFFERENT);
+				defaultfilter.changed(Gtk.FilterChange.DIFFERENT);
 
 			slice.set_offset(0);
 
@@ -295,135 +293,81 @@ public class Window : Gtk.ApplicationWindow {
 		return gifs.createDirs(convertedName);
 	}
 
-
     public void loadingFromFile() {
-		string filePath = convertedFileName();
+        string filePath = convertedFileName();
 
-		if (files.getFile(filePath) != null) {
-			if (files.hasFileContent(filePath)) {
-				gifList = gifs.loadGifs();
-				hasjson = true;
-			} else
-				hasjson = false;
-		}
-	}
+        if (files.getFile(filePath) != null) {
+            if (files.hasFileContent(filePath)) {
+                gifList = gifs.loadGifs();
+                hasjson = true;
+            }
+        }
+    }
 
     public void refreshState() {
-		string path = files.getSetting("path");
-		string filePath = convertedFileName();
+        string path = files.getSetting("path");
+        string filePath = convertedFileName();
 
-		if (filePath == null || filePath.strip() == "")
+        if (filePath == null || filePath.strip() == "") {
+			hasindex = false;
+            setWindowContent();
 			return;
-
-		folder = files.getFile(filePath);
-		hasindex = true;
-
-		if (hasindex) {
-			files.getIndex.begin(path, (obj, res) => {
-				try {
-					filePaths = files.getIndex.end(res);
-					totalitems = filePaths.length;
-
-					var map = new HashTable<string, Gif>(str_hash, str_equal);
-					foreach (var gif in gifList) {
-						if (gif.file_name != null)
-							map.set(gif.file_name, gif);
-					}
-
-					totalitems = filePaths.length;
-					gifList = new Gif[totalitems];
-
-					for (int i = 0; i < filePaths.length; i++) {
-						string filepath = filePaths[i];
-
-						if (map.contains(filepath)) {
-							// existing → reuse (keeps favorite + displayName)
-							gifList[i] = map.get(filepath);
-						} else {
-							// new file → create default
-							var gif = new Gif();
-							gif.file_name = filepath;
-							gif.display_name = Path.get_basename(filepath);
-							gifList[i] = gif;
-						}
-					}
-
-					gifs.saveGifs(gifList);
-
-					setModel();
-					setFactory();
-					setGifList();
-
-				} catch (Error e) {
-					logs.writeToLog(new datetime.now_local().to_string() + " : (setWindowState) " + e.message + "\n");
-				}
-			});
-		} else
-			setWindowContent();
-
-		logs.writeToLog(new datetime.now_local().to_string() + " : window state refreshed\n");
-	}
-
-    public void setWindowState(string[]? newfilePaths) {
-		string filePath = files.getSetting("path");
-
-		if (filePath != null && filePath != "") {
-			folder = files.getFile(filePath);
+		} else {
 			hasindex = true;
+			folder = files.getFile(filePath);
 		}
 
-		if (hasindex) {
+        if (hasindex) {
 			setSpinner(true);
 
-			Idle.add(() => {
-				files.getIndex.begin(filePath, (obj, res) => {
-					try {
-						filePaths = files.getIndex.end(res);
-						totalitems = filePaths.length;
-						warning(totalitems.to_string());
+            files.getIndex.begin(path, (obj, res) => {
+                try {
+                    filePaths = files.getIndex.end(res);
+                    totalitems = filePaths.length;
 
-						var map = new HashTable<string, Gif>(str_hash, str_equal);
-						foreach (var gif in gifList) {
-							if (gif.file_name != null)
-								map.set(gif.file_name, gif);
-						}
+                    var map = new HashTable<string, Gif>(str_hash, str_equal);
+                    foreach (var gif in gifList) {
+						warning(gif.file_name);
+                        if (gif.file_name != null)
+                            map.set(gif.file_name, gif);
+                    }
 
-						totalitems = filePaths.length;
-						gifList = new Gif[totalitems];
+                    totalitems = filePaths.length;
+                    gifList = new Gif[totalitems];
 
-						for (int i = 0; i < filePaths.length; i++) {
-							string path = filePaths[i];
+                    for (int i = 0; i < filePaths.length; i++) {
+                        string filepath = filePaths[i];
 
-							if (map.contains(path)) {
-								// existing → reuse (keeps favorite + displayName)
-								gifList[i] = map.get(path);
-							} else {
-								// new file → create default
-								var gif = new Gif();
-								gif.file_name = path;
-								gif.display_name = Path.get_basename(path);
-								gifList[i] = gif;
-							}
-						}
+                        if (map.contains(filepath)) {
+                            // existing → reuse (keeps favorite + displayName)
+                            gifList[i] = map.get(filepath);
+                        } else {
+                            // new file → create default
+                            var gif = new Gif();
+                            gif.file_name = filepath;
+                            gif.display_name = Path.get_basename(filepath);
+                            gifList[i] = gif;
+                        }
+                    }
 
-						gifs.saveGifs(gifList);
+                    // Only save if there are changes to avoid overwriting user modifications
+                    if (gifList.length > 0) {
+                        gifs.saveGifs(gifList);
+                    }
 
-						setModel();
-						setFactory();
-						setGifList();
+                    setModel();
+                    setFactory();
+                    setGifList();
 
-					} catch (Error e) {
-						logs.writeToLog(new datetime.now_local().to_string() + " : (setWindowState) " + e.message + "\n");
-					}
-				});
+                } catch (Error e) {
+                    logs.writeToLog(new datetime.now_local().to_string() + " : (refreshState) " + e.message + "\n");
+                }
+            });
+        } else
+            setWindowContent();
 
-				return false;
-			});
-		} else
-			setWindowContent();
-
-		logs.writeToLog(new datetime.now_local().to_string() + " : window state set\n");
-	}
+        logs.writeToLog(new datetime.now_local().to_string() + " : window state refreshed\n");
+    }
 
     public void setGifList() {
 		setSpinner(false);
@@ -435,6 +379,7 @@ public class Window : Gtk.ApplicationWindow {
 		favoritebtn.set_action_name("app.favorite");
 
 		checkBackButton();
+		checkNextButton((int)totalitems);
 
 		if (mainbox.get_last_child() != null)
 			if (mainbox.get_last_child().get_name() != null)
@@ -459,7 +404,6 @@ public class Window : Gtk.ApplicationWindow {
 
 		// 	setClipboard(filename);
 		// });
-
 
 		scrolled.set_min_content_height(200);
 		scrolled.set_hexpand(true);
@@ -543,16 +487,6 @@ public class Window : Gtk.ApplicationWindow {
 			box.append(overlay);
 			box.append(label);
 
-			var gridmotion = new Gtk.EventControllerMotion();
-			gridmotion.enter.connect(() => {
-				mainwindow.set_cursor(cursorHand);
-			});
-
-			gridmotion.leave.connect(() => {
-				mainwindow.set_cursor(cursorDefault);
-			});
-			box.add_controller(gridmotion);
-
 			var editmotion = new Gtk.EventControllerMotion();
 			editmotion.enter.connect(() => {
 				mainwindow.set_cursor(cursorProhibited);
@@ -584,12 +518,33 @@ public class Window : Gtk.ApplicationWindow {
 
 			var overlay = (Gtk.Overlay)box.get_first_child();
 			var picture = listitem.get_data<Gtk.Picture>("picture");
+
+			var state = new GifState(filepath);
+
+			var gridmotion = new Gtk.EventControllerMotion();
+			gridmotion.enter.connect(() => {
+				mainwindow.set_cursor(cursorHand);				gifs.startGifAnimation(picture, state);
+			});
+
+			gridmotion.leave.connect(() => {
+				mainwindow.set_cursor(cursorDefault);
+				gifs.stopGifAnimation(picture, state);
+			});
+			box.add_controller(gridmotion);
+
 			var favoriteButton  = listitem.get_data<Gtk.Button>("favoritebutton");
 			var editButton  = listitem.get_data<Gtk.Button>("editbutton");
 			var label = listitem.get_data<Gtk.Label>("label");
-			uint id = gifs.makeGifsSmall(picture, filepath);
+			gifs.makeGifsSmall(picture, filepath);
 
-			picture.set_data("gif-timeout", id);
+
+			//picture.set_data("gif-timeout", id);
+
+			//  picture._startGif = () => {
+			//  	const anim = GdkPixbuf.PixbufAnimation.new_from_file(gifPath);
+
+			//  	box._image.set_from_animation(anim);
+			//  };
 
 			int length = filename.length;
 			if (labelMode == "0") {
@@ -784,15 +739,8 @@ public class Window : Gtk.ApplicationWindow {
 		}
 	}
 
-    public void setModel() {
-		string[] empty = {};
-		model.remove_all();
-
-		foreach (var gif in gifList) {
-			model.append(gif);
-		}
-
-		customfilter = new Gtk.CustomFilter((obj) => {
+	public void createDefaultFilter() {
+		defaultfilter = new Gtk.CustomFilter((obj) => {
 			var gif = obj as Gif;
 
 			if (filter == "")
@@ -801,11 +749,14 @@ public class Window : Gtk.ApplicationWindow {
 			return gif.file_name.down().contains(filter);
 		});
 
-		filtered = new Gtk.FilterListModel(model, customfilter);
+		filtered = new Gtk.FilterListModel(model, defaultfilter);
 
 		filtered.items_changed.connect((position, removed, added) => {
 			totalitems = filtered.get_n_items();
 		});
+	}
+
+	public void createFavoriteFilter() {
 
 		favoritesfilter = new Gtk.CustomFilter((obj) => {
 			var gif = obj as Gif;
@@ -821,6 +772,18 @@ public class Window : Gtk.ApplicationWindow {
 		);
 
 		favoritesselection = new Gtk.SingleSelection(favoritesfiltered);
+	}
+
+    public void setModel() {
+		string[] empty = {};
+		model.remove_all();
+
+		foreach (var gif in gifList) {
+			model.append(gif);
+		}
+
+		createDefaultFilter();
+		createFavoriteFilter();
 
 		slice = new Gtk.SliceListModel(
 			filtered,
@@ -841,6 +804,9 @@ public class Window : Gtk.ApplicationWindow {
 	}
 
     public void setWindowContent() {
+		while(mainbox.get_last_child() != null)
+			mainbox.remove(mainbox.get_last_child());
+
 		searchbtn.set_sensitive(false);
 		refreshbtn.set_sensitive(false);
 		favoritebtn.set_sensitive(false);
@@ -887,6 +853,7 @@ public class Window : Gtk.ApplicationWindow {
 			if (folder != null) {
 				hasindex = true;
 				files.saveSettingsFile("path", folder.get_path());
+
 				gifs.loadGifs();
 				refreshState();
 			}

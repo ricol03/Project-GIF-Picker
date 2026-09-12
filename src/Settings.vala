@@ -9,7 +9,6 @@ public class Settings {
 
 	private Files files = new Files();
 	private Dialogs dialogs = new Dialogs();
-	private Gtk.Application application;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "Settings";
 	private bool clickedbutton = false;

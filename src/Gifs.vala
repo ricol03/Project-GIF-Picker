@@ -7,7 +7,6 @@ public class Gifs {
 	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
-	private Files files = new Files();
 	private string configDir = Environment.get_user_config_dir();
 	private string directory = "io.ricol03.gifpicker";
 	private string filename = "index";
@@ -30,10 +29,34 @@ public class Gifs {
 	}
 
 	public void saveGifs(Gif[] gifs) {
+		var existingGifs = new Gif[0];
+
+		// Check if the file exists and load existing data
+		if (File.new_for_path(filePath).query_exists()) {
+		    try {
+		        existingGifs = loadGifs();
+		    } catch (Error e) {
+		        logs.writeToLog(new datetime.now_local().to_string() + " : Failed to load existing GIFs -> " + e.message + "\n");
+		    }
+		}
+
+		// Merge existing data with new data
+		var map = new HashTable<string, Gif>(str_hash, str_equal);
+		foreach (var gif in existingGifs) {
+		    if (gif.file_name != null)
+		        map.set(gif.file_name, gif);
+		}
+
+		foreach (var gif in gifs) {
+		    if (gif.file_name != null)
+		        map.set(gif.file_name, gif); // Overwrite or add new GIFs
+		}
+
+		// Save merged data
 		var builder = new Json.Builder();
 		builder.begin_array();
 
-		foreach (var gif in gifs) {
+		foreach (var gif in map.get_values()) {
 		    builder.add_value(gif.saveJson());
 		}
 
@@ -42,17 +65,30 @@ public class Gifs {
 		var generator = new Json.Generator();
 		generator.set_root(builder.get_root());
 
-		generator.to_file(filePath);
+		try {
+			generator.to_file(filePath);
+		} catch (Error e) {
+			logs.writeToLog(" : Failed to write JSON file -> " + e.message + "\n");
+		}
 	}
 
 	public Gif[] loadGifs() {
 		logs.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
 		var parser = new Json.Parser();
-		if (!File.new_for_path(filePath).query_exists()) {
-			files.createFile(filePath);
+
+		try {
+			parser.load_from_file(filePath);
+		} catch (Error e) {
+			logs.writeToLog(" : Failed to parse JSON file -> " + e.message + "\n");
 		}
 
-		parser.load_from_file(filePath);
+		warning("nome do diretório: " + filePath);
+
+		try {
+			parser.load_from_file(filePath);
+		} catch (Error e) {
+			logs.writeToLog(new datetime.now_local().to_string() + " : Failed to parse JSON file -> " + e.message + "\n");
+		}
 
 		var root = parser.get_root();
 		var array = root.get_array();
@@ -68,18 +104,91 @@ public class Gifs {
 	}
 
 	public uint makeGifsSmall(Gtk.Picture picture, string filePath) {
-		var animation = new Gdk.PixbufAnimation.from_file(filePath);
+		Gdk.PixbufAnimation animation = null;
+		animation = new Gdk.PixbufAnimation.from_file(filePath);
+		warning(filePath);
 		var iter = animation.get_iter(null);
+		var texture = Gdk.Texture.for_pixbuf(iter.get_pixbuf());
+		picture.set_paintable(texture);
 
-		uint id = Timeout.add(iter.get_delay_time(), () => {
-			if (iter.advance(null)) {
-				var texture = Gdk.Texture.for_pixbuf(iter.get_pixbuf());
-				picture.set_paintable(texture);
-			}
+		return 1;
+	}
 
-			return true;
-		});
+	public void startGifAnimation(
+		Gtk.Picture picture,
+		GifState state
+	) {
+		// Already playing
+		if (state.timeout_id != 0)
+		    return;
 
-		return id;
+		if (state.filepath == null) {
+		    warning("vai mas é trabalhar, ó");
+		    return;
+		}
+
+		try {
+		    state.animation =
+		        new Gdk.PixbufAnimation.from_file(state.filepath);
+
+		    state.iter =
+		        state.animation.get_iter(null);
+
+		} catch (Error e) {
+		    warning("Could not load gif: %s", e.message);
+		    return;
+		}
+
+		// Show first frame immediately
+		var texture =
+		    Gdk.Texture.for_pixbuf(state.iter.get_pixbuf());
+
+		picture.set_paintable(texture);
+
+		scheduleNextFrame(picture, state);
+	}
+
+	private void scheduleNextFrame(
+		Gtk.Picture picture,
+		GifState state
+	) 
+  {
+		if (state.iter == null)
+		    return;
+
+		state.timeout_id = Timeout.add(
+		    state.iter.get_delay_time(),
+		    () => {
+		        state.timeout_id = 0;
+
+		        if (state.iter == null)
+		            return false;
+
+		        state.iter.advance(null);
+
+		        var texture =
+		            Gdk.Texture.for_pixbuf(state.iter.get_pixbuf());
+
+		        picture.set_paintable(texture);
+
+		        scheduleNextFrame(picture, state);
+
+		        return false;
+		    }
+		);
+	}
+
+	public void stopGifAnimation(
+		Gtk.Picture picture,
+		GifState state
+	) 
+	{
+		if (state.timeout_id != 0) {
+			Source.remove(state.timeout_id);
+			state.timeout_id = 0;
+		}
+
+		state.iter = null;
+    	state.animation = null;
 	}
 }

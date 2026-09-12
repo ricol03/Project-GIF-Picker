@@ -95,15 +95,23 @@ public class Files {
 	}
 
 	public void createFile(string filePath) {
-		FileUtils.set_contents(filePath, "");
-		logs.writeToLog(new datetime.now_local().to_string() + " : created file named " + filePath + "\n");
+		try {
+			FileUtils.set_contents(filePath, "");
+			logs.writeToLog(new datetime.now_local().to_string() + " : created file named " + filePath + "\n");
+		} catch (Error e) {
+			logs.writeToLog(new datetime.now_local().to_string() + " : Error creating file: " + e.message);
+		}
 	}
 
 	public void createSettingsFile() {
 		File file = checkSettingsFile();
 		if (!file.query_exists()) {
-			FileUtils.set_contents(file.get_path(), "");
-			logs.writeToLog(new datetime.now_local().to_string() + " : created settings file\n");
+			try {
+				FileUtils.set_contents(file.get_path(), "");
+				logs.writeToLog(new datetime.now_local().to_string() + " : created settings file\n");
+			} catch (Error e) {
+				logs.writeToLog(new datetime.now_local().to_string() + " : Error creating settings file: " + e.message + "\n");
+			}
 		} else
 			logs.writeToLog(new datetime.now_local().to_string() + " : settings file already exists\n");
 	}

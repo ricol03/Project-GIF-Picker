@@ -8,7 +8,6 @@ using Gdk;
 public class Application : Gtk.Application {
 	private Logs logs = new Logs();
 
-	private Dialogs dialog = new Dialogs();
 	private Files files = new Files();
 	private About about = new About();
 	private string[] filePaths = null;
