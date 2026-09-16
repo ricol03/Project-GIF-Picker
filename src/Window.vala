@@ -327,9 +327,9 @@ public class Window : Gtk.ApplicationWindow {
 
                     var map = new HashTable<string, Gif>(str_hash, str_equal);
                     foreach (var gif in gifList) {
-						warning(gif.file_name);
-                        if (gif.file_name != null)
-                            map.set(gif.file_name, gif);
+						warning(gif.fileName);
+                        if (gif.fileName != null)
+                            map.set(gif.fileName, gif);
                     }
 
                     totalitems = filePaths.length;
@@ -344,8 +344,9 @@ public class Window : Gtk.ApplicationWindow {
                         } else {
                             // new file → create default
                             var gif = new Gif();
-                            gif.file_name = filepath;
-                            gif.display_name = Path.get_basename(filepath);
+                            gif.filePath = filepath;
+                            gif.fileName = Path.get_basename(filepath);
+							gif.displayName = Path.get_basename(filepath);
                             gifList[i] = gif;
                         }
                     }
@@ -487,7 +488,7 @@ public class Window : Gtk.ApplicationWindow {
 			box.append(overlay);
 			box.append(label);
 
-			var editmotion = new Gtk.EventControllerMotion();
+			/*var editmotion = new Gtk.EventControllerMotion();
 			editmotion.enter.connect(() => {
 				mainwindow.set_cursor(cursorProhibited);
 			});
@@ -496,7 +497,7 @@ public class Window : Gtk.ApplicationWindow {
 				mainwindow.set_cursor(cursorHand);
 			});
 
-			editButton.add_controller(editmotion);
+			editButton.add_controller(editmotion);*/
 
 			listitem.set_data("picture", picture);
 			listitem.set_data("favoritebutton", favoriteButton);
@@ -510,7 +511,7 @@ public class Window : Gtk.ApplicationWindow {
 
 			var gif = (Gif)listitem.get_item();
 
-			var filepath = gif.file_name;
+			var filepath = gif.fileName;
 			string filename = Path.get_basename(filepath);
 
 			var box = (Gtk.Box) listitem.get_child();
@@ -523,7 +524,8 @@ public class Window : Gtk.ApplicationWindow {
 
 			var gridmotion = new Gtk.EventControllerMotion();
 			gridmotion.enter.connect(() => {
-				mainwindow.set_cursor(cursorHand);				gifs.startGifAnimation(picture, state);
+				mainwindow.set_cursor(cursorHand);				
+				gifs.startGifAnimation(picture, state);
 			});
 
 			gridmotion.leave.connect(() => {
@@ -564,7 +566,7 @@ public class Window : Gtk.ApplicationWindow {
 			gif.notify["is-favorite"].connect(() => {
 				#if WINDOWS
 				var image = new Gtk.Image.from_resource(
-					gif.is_favorite
+					gif.isFavorite
 						? "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/starred-symbolic.svg"
 						: "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/non-starred-symbolic.svg"
 				);
@@ -572,7 +574,7 @@ public class Window : Gtk.ApplicationWindow {
 				favoriteButton.set_child(image);
 				#else
 				favoriteButton.set_icon_name(
-					gif.is_favorite
+					gif.isFavorite
 						? "starred-symbolic"
 						: "non-starred-symbolic"
 				);
@@ -583,7 +585,7 @@ public class Window : Gtk.ApplicationWindow {
 
 			#if WINDOWS
 				var image = new Gtk.Image.from_resource(
-					gif.is_favorite
+					gif.isFavorite
 						? "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/starred-symbolic.svg"
 						: "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/non-starred-symbolic.svg"
 				);
@@ -591,19 +593,19 @@ public class Window : Gtk.ApplicationWindow {
 				favoriteButton.set_child(image);
 				#else
 				favoriteButton.set_icon_name(
-					gif.is_favorite
+					gif.isFavorite
 						? "starred-symbolic"
 						: "non-starred-symbolic"
 				);
-				#endif
+			#endif
 
 			favoriteButton.clicked.connect(() => {
-				gif.is_favorite = !gif.is_favorite;
+				gif.isFavorite = !gif.isFavorite;
 				favoritesfilter.changed(Gtk.FilterChange.DIFFERENT);
 
 				#if WINDOWS
 				var image2 = new Gtk.Image.from_resource(
-					gif.is_favorite
+					gif.isFavorite
 						? "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/starred-symbolic.svg"
 						: "/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/non-starred-symbolic.svg"
 				);
@@ -611,12 +613,16 @@ public class Window : Gtk.ApplicationWindow {
 				favoriteButton.set_child(image2);
 				#else
 				favoriteButton.set_icon_name(
-					gif.is_favorite
+					gif.isFavorite
 						? "starred-symbolic"
 						: "non-starred-symbolic"
 				);
 				#endif
 				gifs.saveGifs(gifList);
+			});
+
+			editButton.clicked.connect(() => {
+				new Edit(application, this, filepath, filename,  gif.dateTime.to_string());
 			});
 
 			var gesture = new Gtk.GestureClick();
@@ -746,7 +752,7 @@ public class Window : Gtk.ApplicationWindow {
 			if (filter == "")
 				return true;
 
-			return gif.file_name.down().contains(filter);
+			return gif.fileName.down().contains(filter);
 		});
 
 		filtered = new Gtk.FilterListModel(model, defaultfilter);
@@ -760,7 +766,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		favoritesfilter = new Gtk.CustomFilter((obj) => {
 			var gif = obj as Gif;
-			return gif.is_favorite;
+			return gif.isFavorite;
 		});
 
 		favoritesfiltered = new Gtk.FilterListModel(model, favoritesfilter);

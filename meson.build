@@ -1,4 +1,4 @@
-project('io.ricol03.gifpicker', 'c', 'vala')
+project('gif-picker', 'c', 'vala')
 
 gnome = import('gnome')
 
@@ -14,6 +14,7 @@ project_gif_picker_sources = [
 	'src' / 'Application.vala',
 	'src' / 'About.vala',
     'src' / 'Dialogs.vala',
+    'src' / 'Edit.vala',
     'src' / 'Files.vala',
     'src' / 'Gif.vala',
     'src' / 'Gifs.vala',
@@ -38,7 +39,7 @@ gresource = gnome.compile_resources(
 )
 
 install_data(
-    'data' / 'io.ricol03.gifpicker.desktop',
+    'data' / 'gif-picker.desktop',
     install_dir: get_option('datadir') / 'applications'
 )
 

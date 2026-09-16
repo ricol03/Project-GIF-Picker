@@ -43,13 +43,13 @@ public class Gifs {
 		// Merge existing data with new data
 		var map = new HashTable<string, Gif>(str_hash, str_equal);
 		foreach (var gif in existingGifs) {
-		    if (gif.file_name != null)
-		        map.set(gif.file_name, gif);
+		    if (gif.fileName != null)
+		        map.set(gif.fileName, gif);
 		}
 
 		foreach (var gif in gifs) {
-		    if (gif.file_name != null)
-		        map.set(gif.file_name, gif); // Overwrite or add new GIFs
+		    if (gif.fileName != null)
+		        map.set(gif.fileName, gif); // Overwrite or add new GIFs
 		}
 
 		// Save merged data
@@ -106,7 +106,7 @@ public class Gifs {
 	public uint makeGifsSmall(Gtk.Picture picture, string filePath) {
 		Gdk.PixbufAnimation animation = null;
 		animation = new Gdk.PixbufAnimation.from_file(filePath);
-		warning(filePath);
+		//warning(filePath);
 		var iter = animation.get_iter(null);
 		var texture = Gdk.Texture.for_pixbuf(iter.get_pixbuf());
 		picture.set_paintable(texture);

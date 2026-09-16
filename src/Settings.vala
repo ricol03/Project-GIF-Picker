@@ -13,6 +13,12 @@ public class Settings {
 	private string windowtitle = "Settings";
 	private bool clickedbutton = false;
 
+	private Gtk.Button pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+	private Gtk.Entry pathentry = new Gtk.Entry();
+	private Gtk.DropDown closeswitch;
+
+	private Gtk.Label tagsinfo;
+
 	public Settings(Gtk.Application app, Window window) {
 		logs.writeToLog(new datetime.now_local().to_string() + " : opened settings\n");
 
@@ -23,7 +29,10 @@ public class Settings {
 			margin_end = 24
 		};
 
-		var generalframe = new Gtk.Frame("General");
+		var generaltitle = new Gtk.Label("General");
+		generaltitle.add_css_class("settings-title");
+		generaltitle.set_halign(Gtk.Align.START);
+		var generalframe = new Gtk.Frame(null);
 		var generalbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 12) {
 			margin_top = 12,
 			margin_bottom = 12,
@@ -31,57 +40,31 @@ public class Settings {
 			margin_end = 12
 		};
 
-		var combobox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
+		createGeneralSection(window, generalframe, generalbox);
 
-		string placeholder = "(No file selected)";
-		string filename = null;
-		File file = files.checkSettingsFile();
-		if (file.query_exists())
-			filename = files.getSetting("path");
+		var tagstitle = new Gtk.Label("Tags");
+		tagstitle.add_css_class("settings-title");
+		tagstitle.set_halign(Gtk.Align.START);
 
-		var pathentry = new Gtk.Entry();
-		pathentry.set_placeholder_text(placeholder);
-		if (filename != null)
-			pathentry.set_text(filename);
+		var addbutton = new Gtk.Button.from_icon_name("add-symbolic");
+		addbutton.add_css_class("linked");
 
-		var pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
-		pathbutton.add_css_class("linked");
+		var titlecombo = makeRowTitle(tagstitle, addbutton);
+		var tagsframe = new Gtk.Frame(null);
+		var tagsbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 12) {
+			margin_top = 12,
+			margin_bottom = 12,
+			margin_start = 12,
+			margin_end = 12
+		};
 
-		File? newfile = null;
-		pathbutton.clicked.connect(() => {
-			dialogs.openFolderDialog.begin(window, (obj, res) => {
-				try {
-					newfile = dialogs.openFolderDialog.end(res);
-					if (newfile != null) {
-						pathentry.set_text(newfile.get_path());
-						logs.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
-					}
-				} catch (Error e) {
-					logs.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
-				}
-			});
+		addbutton.clicked.connect(() => {
+			tagsbox.remove(tagsinfo);
+			tagsbox.append(addTag());
+			
 		});
 
-		combobox.append(pathentry);
-		combobox.append(pathbutton);
-
-		var pathentryrow = makeRow("Path for GIF library", combobox);
-
-		string[] options = {"Complete name", "Complete name w/o extension"};
-
-		var closeswitch = new Gtk.DropDown.from_strings(options);
-
-		if (file.query_exists()) {
-			var num = files.getSetting("labels");
-			closeswitch.set_selected(int.parse(num));
-		}
-
-		var closerow = makeRow("Label presentation", closeswitch);
-
-		generalbox.append(pathentryrow);
-		generalbox.append(closerow);
-
-		generalframe.set_child(generalbox);
+		createTagsSection(window, tagsframe, tagsbox);
 
 		var shortcutsframe = new Gtk.Frame("Shortcuts");
 		var shortcutsbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 12) {
@@ -116,14 +99,17 @@ public class Settings {
 		buttonsbox.append(cancelbutton);
 		buttonsbox.append(applybutton);
 
+		box.append(generaltitle);
 		box.append(generalframe);
 		//box.append(shortcutsframe);
+		box.append(titlecombo);
+		box.append(tagsframe);
 		box.append(buttonsbox);
 
 		mainwindow = new Gtk.ApplicationWindow(app) {
 			child = box,
 			default_height = 240,
-			default_width = 480,
+			default_width = 520,
 			title = windowtitle
 		};
 		mainwindow.set_transient_for(null);
@@ -141,16 +127,137 @@ public class Settings {
 		});
 	}
 
+	private void createGeneralSection(Window window, Gtk.Frame generalframe, Gtk.Box generalbox) {
+		var combobox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
+
+		string placeholder = "(No file selected)";
+		string filename = null;
+		File file = files.checkSettingsFile();
+		if (file.query_exists())
+			filename = files.getSetting("path");
+
+		pathentry.set_placeholder_text(placeholder);
+		pathentry.set_hexpand(true);
+		if (filename != null)
+			pathentry.set_text(filename);
+
+		var pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+		pathbutton.add_css_class("linked");
+
+		File? newfile = null;
+		pathbutton.clicked.connect(() => {
+			dialogs.openFolderDialog.begin(window, (obj, res) => {
+				try {
+					newfile = dialogs.openFolderDialog.end(res);
+					if (newfile != null) {
+						pathentry.set_text(newfile.get_path());
+						logs.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
+					}
+				} catch (Error e) {
+					logs.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
+				}
+			});
+		});
+
+		combobox.append(pathentry);
+		combobox.append(pathbutton);
+
+		var pathentryrow = makeRow("Path for GIF library", combobox);
+
+		string[] options = {"Complete name", "Complete name w/o extension"};
+
+		closeswitch = new Gtk.DropDown.from_strings(options);
+
+		if (file.query_exists()) {
+			var num = files.getSetting("labels");
+			closeswitch.set_selected(int.parse(num));
+		}
+
+		var closerow = makeRow("Label presentation", closeswitch);
+
+		generalbox.append(pathentryrow);
+		generalbox.append(closerow);
+
+		generalframe.set_child(generalbox);
+	}
+
+	private void createTagsSection(Window window, Gtk.Frame tagsframe, Gtk.Box tagsbox) {
+
+		File file = files.checkFile("tags.conf");
+		int lines = files.getFileLines("tags.conf");
+
+		string content;
+
+		try {
+			FileUtils.get_contents(file.get_path(), out content);
+
+			if (content == "") {
+				tagsinfo = new Gtk.Label("No tags available, click the \"+\" button to add one."); 
+				tagsbox.append(tagsinfo);
+			}
+
+		} catch (Error e) {
+			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+		}
+
+		for (var i = 0; i < lines; i++) {
+			if (i == 0) {
+				int id = 0;
+				foreach (string line in content.split("\n")) {
+					warning("a " + id++.to_string());
+				}
+			}
+
+		}
+
+
+		tagsframe.set_child(tagsbox);
+
+	}
+
 	private Gtk.Widget makeRow(string title, Gtk.Widget control) {
 		var row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
 		row.set_hexpand(true);
 
 		var label = new Gtk.Label(title);
 		label.set_xalign(0);
-		label.set_hexpand(true);
+		label.width_request = 125;
+
+		control.set_hexpand(true);
 
 		row.append(label);
 		row.append(control);
+
+		return row;
+	}
+
+	private Gtk.Widget makeRowTitle(Gtk.Widget title, Gtk.Button button) {
+		var row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
+		row.set_hexpand(true);
+
+		title.set_hexpand(true);
+
+		row.append(title);
+		row.append(button);
+
+		return row;
+	}
+
+	private Gtk.Widget addTag() {
+		var row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
+		row.set_hexpand(true);
+
+		Gtk.Entry tagname = new Gtk.Entry();
+		var deletebutton = new Gtk.Button.from_icon_name("delete-symbolic");
+		deletebutton.add_css_class("linked");
+
+		deletebutton.clicked.connect(() => {
+		});
+
+		tagname.set_hexpand(true);
+
+		row.append(tagname);
+		row.append(deletebutton);
 
 		return row;
 	}

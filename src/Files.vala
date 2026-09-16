@@ -28,12 +28,12 @@ public class Files {
 		}
 	}
 
-	public int getFileLines() {
+	public int getFileLines(string fileName) {
 		string? line = null;
 		int current = 1;
 
 		try {
-			var file = File.new_for_path(Path.build_filename(configDir, directory, filename));
+			var file = File.new_for_path(Path.build_filename(configDir, directory, fileName));
 			var dis = new DataInputStream(file.read());
 
 			while ((line = dis.read_line(null)) != null)
@@ -94,14 +94,22 @@ public class Files {
 		return file;
 	}
 
-	public void createFile(string filePath) {
+	public File checkFile(string fileName) {
+		string path = Path.build_filename(configDir, directory, fileName);
+
+		File file = File.new_for_path(path);
+		return file;
+	}
+
+	/*public void createFile(string filePath) {
+		File file = checkFile(string fileName)
 		try {
 			FileUtils.set_contents(filePath, "");
 			logs.writeToLog(new datetime.now_local().to_string() + " : created file named " + filePath + "\n");
 		} catch (Error e) {
 			logs.writeToLog(new datetime.now_local().to_string() + " : Error creating file: " + e.message);
 		}
-	}
+	}*/
 
 	public void createSettingsFile() {
 		File file = checkSettingsFile();
@@ -114,6 +122,19 @@ public class Files {
 			}
 		} else
 			logs.writeToLog(new datetime.now_local().to_string() + " : settings file already exists\n");
+	}
+
+	public void createFile(string fileName) {
+		File file = checkFile(fileName);
+		if (!file.query_exists()) {
+			try {
+				FileUtils.set_contents(file.get_path(), "");
+				logs.writeToLog(new datetime.now_local().to_string() + " : created " + fileName + "\n");
+			} catch (Error e) {
+				logs.writeToLog(new datetime.now_local().to_string() + " : Error creating " + fileName + ": " + e.message + "\n");
+			}
+		} else
+			logs.writeToLog(new datetime.now_local().to_string() + " : " + fileName + " already exists\n");
 	}
 
 	public void saveSettingsFile(string key, string text) {

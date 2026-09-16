@@ -17,3 +17,9 @@
 	background-color: #2B2B2B;
     opacity: 1.0;
 }
+
+.settings-title {
+    text-align: left;
+    font-weight: bold;
+    font-size: 18px;
+}

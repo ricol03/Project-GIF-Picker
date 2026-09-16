@@ -123,6 +123,7 @@ public class Application : Gtk.Application {
 
 		files.createSettingsDirectory();
 		files.createSettingsFile();
+		files.createFile("tags.conf");
 
 		window = new Window(this);
  	}
