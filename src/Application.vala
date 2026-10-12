@@ -6,8 +6,6 @@
 using Gdk;
 
 public class Application : Gtk.Application {
-	private Logs logs = new Logs();
-
 	private Files files = new Files();
 	private About about = new About();
 	private string[] filePaths = null;
@@ -100,6 +98,15 @@ public class Application : Gtk.Application {
 			window.toggleFavoritePanel();
 		});
 
+		var filter_action = new SimpleAction("filter", null);
+
+		add_action(filter_action);
+		set_accels_for_action("app.filter", new string[] {"<Alt>f"});
+		filter_action.activate.connect(() => {
+			window.toggleFavoritePanel();
+		});
+
+
 		//  var toggle_action = new SimpleAction("toggle", null);
 
 		//  add_action(toggle_action);
@@ -117,9 +124,10 @@ public class Application : Gtk.Application {
 
     protected override void activate() {
 		base.activate();
-		logs.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
+		
+		files.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
 		var datetime = new GLib.DateTime.now_local();
-		logs.writeToLog(new datetime.now_local().to_string() + " : started app\n");
+		files.writeToLog(new datetime.now_local().to_string() + " : started app\n");
 
 		files.createSettingsDirectory();
 		files.createSettingsFile();

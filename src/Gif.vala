@@ -9,14 +9,16 @@ public class Gif : Object {
 	public string displayName { get; set; }
 	public bool isFavorite { get; set; default = false; }
 	public string dateTime { get; set; }
+	public string[] tags { get; set; }
 	private GLib.DateTime date;
+	private Files files = new Files();
 
 	public Gif() {}
 
 	public Json.Node saveJson() {
 		var builder = new Json.Builder();
 
-		GLib.File file = File.new_for_path(fileName);
+		GLib.File file = File.new_for_path(filePath);
 
         try {
             FileInfo info = file.query_info(
@@ -33,7 +35,7 @@ public class Gif : Object {
 		builder.begin_object();
 
 		builder.set_member_name("filePath");
-		builder.add_string_value(fileName);
+		builder.add_string_value(filePath);
 
 		builder.set_member_name("fileName");
 		builder.add_string_value(fileName);
@@ -47,6 +49,14 @@ public class Gif : Object {
 		builder.set_member_name("dateTime");
 		builder.add_string_value(date.to_string());
 
+		builder.set_member_name("tags");
+		builder.begin_array();
+
+		foreach (string tag in tags) {
+			builder.add_string_value (tag);
+		}
+
+		builder.end_array();
 		builder.end_object();
 
 		return builder.get_root();
@@ -54,6 +64,9 @@ public class Gif : Object {
 
 	public static Gif loadJson(Json.Object obj) {
 		var gif = new Gif();
+
+		if (obj.has_member("filePath"))
+		    gif.filePath = obj.get_string_member("filePath");
 
 		if (obj.has_member("fileName"))
 		    gif.fileName = obj.get_string_member("fileName");
@@ -65,35 +78,85 @@ public class Gif : Object {
 		    gif.isFavorite = obj.get_boolean_member("isFavorite");
 
 		if (obj.has_member("dateTime")) {
-
 		    string date = obj.get_string_member("dateTime");
 
-			if (date != null) {
-
-				/*string[] parts = date.split(" ");
-
-				string[] d = parts[0].split("-");
-				string[] t = parts[1].split(":");
-
-				int year   = int.parse(d[0]);
-				int month  = int.parse(d[1]);
-				int day    = int.parse(d[2]);
-				int hour   = int.parse(t[0]);
-				int minute = int.parse(t[1]);
-				int second = int.parse(t[2]);
-
-				DateTime dt = new DateTime.local(
-					year, month, day,
-					hour, minute, second
-				);*/
-				
+			if (date != null)
 				gif.dateTime = date;
-			} else {
+			else
 				gif.dateTime = null;
-			}
 		}
 
+		if (obj.has_member("tags")) {
+		    Json.Array tags = obj.get_member("tags").get_array();
+
+			string[] result = {};
+
+			for (uint i = 0; i < tags.get_length (); i++) {
+				result += tags.get_string_element (i);
+			}
+
+			gif.tags = result;
+		}
+
+
 		return gif;
+	}
+
+	public void updateData(string[] newtags, string gifname, string filePath) {
+		try {
+			Json.Object? targetObject = null;
+
+			// Read the existing JSON file
+			var parser = new Json.Parser();
+			parser.load_from_file(filePath);
+
+			var node = parser.get_root();
+			var files = node.get_array();
+
+			// Find the object matching the filename
+			for (uint i = 0; i < files.get_length(); i++) {
+				var item = files.get_object_element(i);
+
+				if (item.has_member("fileName") &&
+					item.get_string_member("fileName") == gifname) {
+					targetObject = item;
+					break;
+				}
+			}
+
+			if (targetObject != null) {
+				Json.Array tags;
+
+				if (targetObject.has_member("tags") &&
+					targetObject.get_member("tags").get_node_type() == Json.NodeType.ARRAY) {
+					tags = targetObject.get_array_member("tags");
+				} else {
+					tags = new Json.Array();
+					targetObject.set_array_member("tags", tags);
+				}
+
+				// Overwrites the current tags with new ones
+				var newTags = new Json.Array();
+
+				foreach (string tag in newtags) {
+					newTags.add_string_element(tag);
+				}
+
+				targetObject.set_array_member("tags", newTags);
+
+				// Write the updated JSON array back to the file
+				var generator = new Json.Generator();
+				generator.set_root(node);
+				generator.pretty = true;
+				generator.to_file(filePath);
+
+			} else {
+				print("File not found in JSON: %s\n", gifname);
+			}
+
+		} catch (Error e) {
+			print("Failed to update JSON: %s\n", e.message);
+		}
 	}
 
 	// public string getFileName() {

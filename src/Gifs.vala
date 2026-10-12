@@ -4,11 +4,11 @@
  ****/
 
 public class Gifs {
-	private Logs logs = new Logs();
+	private Files files = new Files();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	private string configDir = Environment.get_user_config_dir();
-	private string directory = "io.ricol03.gifpicker";
+	private string directory = "gifpicker";
 	private string filename = "index";
 	private string filePath;
 
@@ -36,7 +36,7 @@ public class Gifs {
 		    try {
 		        existingGifs = loadGifs();
 		    } catch (Error e) {
-		        logs.writeToLog(new datetime.now_local().to_string() + " : Failed to load existing GIFs -> " + e.message + "\n");
+		        files.writeToLog(new datetime.now_local().to_string() + " : Failed to load existing GIFs -> " + e.message + "\n");
 		    }
 		}
 
@@ -64,30 +64,23 @@ public class Gifs {
 
 		var generator = new Json.Generator();
 		generator.set_root(builder.get_root());
+		generator.pretty = true;
 
 		try {
 			generator.to_file(filePath);
 		} catch (Error e) {
-			logs.writeToLog(" : Failed to write JSON file -> " + e.message + "\n");
+			files.writeToLog(" : Failed to write JSON file -> " + e.message + "\n");
 		}
 	}
 
 	public Gif[] loadGifs() {
-		logs.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
+		files.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
 		var parser = new Json.Parser();
 
 		try {
 			parser.load_from_file(filePath);
 		} catch (Error e) {
-			logs.writeToLog(" : Failed to parse JSON file -> " + e.message + "\n");
-		}
-
-		warning("nome do diretório: " + filePath);
-
-		try {
-			parser.load_from_file(filePath);
-		} catch (Error e) {
-			logs.writeToLog(new datetime.now_local().to_string() + " : Failed to parse JSON file -> " + e.message + "\n");
+			files.writeToLog(new datetime.now_local().to_string() + " : Failed to parse JSON file -> " + e.message + "\n");
 		}
 
 		var root = parser.get_root();
@@ -190,5 +183,9 @@ public class Gifs {
 
 		state.iter = null;
     	state.animation = null;
+	}
+
+	public string getFilePath() {
+		return filePath;
 	}
 }

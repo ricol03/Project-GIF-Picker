@@ -4,7 +4,6 @@
  ****/
 
 public class Settings {
-	private Logs logs = new Logs();
 	private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	private Files files = new Files();
@@ -20,13 +19,20 @@ public class Settings {
 	private Gtk.Label tagsinfo;
 
 	public Settings(Gtk.Application app, Window window) {
-		logs.writeToLog(new datetime.now_local().to_string() + " : opened settings\n");
+		files.writeToLog(new datetime.now_local().to_string() + " : opened settings\n");
+
+		Gtk.Box topbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 10) {
+			margin_top = 15,
+			margin_bottom = 15,
+			margin_start = 15,
+			margin_end = 15
+		};
 
 		Gtk.Box box = new Gtk.Box(Gtk.Orientation.VERTICAL, 10) {
-			margin_top = 24,
-			margin_bottom = 24,
-			margin_start = 24,
-			margin_end = 24
+			margin_top = 15,
+			margin_bottom = 15,
+			margin_start = 15,
+			margin_end = 15
 		};
 
 		var generaltitle = new Gtk.Label("General");
@@ -60,9 +66,17 @@ public class Settings {
 
 		addbutton.clicked.connect(() => {
 			tagsbox.remove(tagsinfo);
-			tagsbox.append(addTag());
-			
+			tagsbox.append(addTag(tagsbox, null));
 		});
+
+		var scrolled = new Gtk.ScrolledWindow();
+		scrolled.set_child(tagsframe);
+		scrolled.set_max_content_height(300);
+		scrolled.set_propagate_natural_height(true);
+		scrolled.set_policy (
+			Gtk.PolicyType.NEVER,
+			Gtk.PolicyType.AUTOMATIC
+		);
 
 		createTagsSection(window, tagsframe, tagsbox);
 
@@ -76,11 +90,12 @@ public class Settings {
 
 		var buttonsbox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
 		buttonsbox.set_halign(Gtk.Align.END);
+		
 		var cancelbutton = new Gtk.Button();
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
-			logs.writeToLog(new datetime.now_local().to_string() + " : closed settings via close button\n");
+			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via close button\n");
 			mainwindow.destroy();
 		});
 
@@ -88,32 +103,62 @@ public class Settings {
 		applybutton.set_label("Apply");
 
 		applybutton.clicked.connect(() => {
-			logs.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
+			files.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
 
 			files.saveSettingsFile("path", pathentry.get_text());
 			files.saveSettingsFile("revealer", "false");
 			files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
+
+			var content = "";
+
+			for (
+				var child = tagsbox.get_first_child(); 
+				child != null; 
+				child = child.get_next_sibling()
+			) {
+				var aux = child.get_next_sibling();
+				if (!(child is Gtk.Label)) {
+					var entry = child.get_first_child();
+
+					if (entry is Gtk.Entry) {
+						content += entry.get_text();
+						if (aux != null)
+							content += "\n";
+					}
+				}
+			}
+
+			files.saveTagsFile(content);
+
 			clickedbutton = true;
 		});
 
 		buttonsbox.append(cancelbutton);
 		buttonsbox.append(applybutton);
 
-		box.append(generaltitle);
-		box.append(generalframe);
+		topbox.append(generaltitle);
+		topbox.append(generalframe);
 		//box.append(shortcutsframe);
-		box.append(titlecombo);
-		box.append(tagsframe);
+		topbox.append(titlecombo);
+		topbox.append(scrolled);
+
+		box.append(topbox);
+
+		var spacer = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		spacer.vexpand = true;
+		box.append (spacer);
+
 		box.append(buttonsbox);
 
 		mainwindow = new Gtk.ApplicationWindow(app) {
 			child = box,
-			default_height = 240,
+			default_height = 500,
 			default_width = 520,
 			title = windowtitle
 		};
-		mainwindow.set_transient_for(null);
+		mainwindow.set_transient_for(window);
 		mainwindow.set_resizable(false);
+		mainwindow.set_modal(true);
 		
 		mainwindow.present();
 
@@ -121,7 +166,7 @@ public class Settings {
 			if (clickedbutton)
 				window.refreshState();
 			
-			logs.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
+			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
 			mainwindow.destroy();
 			return true;
 		});
@@ -151,10 +196,10 @@ public class Settings {
 					newfile = dialogs.openFolderDialog.end(res);
 					if (newfile != null) {
 						pathentry.set_text(newfile.get_path());
-						logs.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
+						files.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
 					}
 				} catch (Error e) {
-					logs.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
+					files.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
 				}
 			});
 		});
@@ -184,7 +229,6 @@ public class Settings {
 	private void createTagsSection(Window window, Gtk.Frame tagsframe, Gtk.Box tagsbox) {
 
 		File file = files.checkFile("tags.conf");
-		int lines = files.getFileLines("tags.conf");
 
 		string content;
 
@@ -194,25 +238,17 @@ public class Settings {
 			if (content == "") {
 				tagsinfo = new Gtk.Label("No tags available, click the \"+\" button to add one."); 
 				tagsbox.append(tagsinfo);
-			}
-
-		} catch (Error e) {
-			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
-		}
-
-		for (var i = 0; i < lines; i++) {
-			if (i == 0) {
-				int id = 0;
+			} else {
 				foreach (string line in content.split("\n")) {
-					warning("a " + id++.to_string());
+				tagsbox.append(addTag(tagsbox, line));
 				}
 			}
 
+		} catch (Error e) {
+			files.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
 		}
 
-
 		tagsframe.set_child(tagsbox);
-
 	}
 
 	private Gtk.Widget makeRow(string title, Gtk.Widget control) {
@@ -243,20 +279,65 @@ public class Settings {
 		return row;
 	}
 
-	private Gtk.Widget addTag() {
+	private Gtk.Widget addTag(Gtk.Box tagsbox, string? name) {
+
+		string tempname = "";
+
 		var row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
 		row.set_hexpand(true);
 
 		Gtk.Entry tagname = new Gtk.Entry();
+		tagname.set_placeholder_text("Tag name");
+		tagname.set_sensitive(false);
+
+		if (name != null && name != "") 
+			tagname.set_text(name);
+
 		var deletebutton = new Gtk.Button.from_icon_name("delete-symbolic");
 		deletebutton.add_css_class("linked");
 
+		var editbutton = new Gtk.Button.from_icon_name("edit-symbolic");
+		editbutton.add_css_class("linked");
+
 		deletebutton.clicked.connect(() => {
+			if (deletebutton.get_icon_name() == "delete-symbolic") {
+				tagsbox.remove(row);
+
+				if (tagsbox.get_first_child() == null) {
+					tagsinfo = new Gtk.Label("No tags available, click the \"+\" button to add one."); 
+					tagsbox.append(tagsinfo);
+				}
+
+			} else {
+				tagname.set_text(tempname);
+
+				tagname.set_sensitive(false);
+
+				deletebutton.set_icon_name("delete-symbolic");
+				editbutton.set_icon_name("edit-symbolic");
+			}
+		});
+
+		editbutton.clicked.connect(() => {
+			if (editbutton.get_icon_name() == "edit-symbolic") {
+				tempname = tagname.get_text();
+
+				tagname.set_sensitive(true);
+
+				deletebutton.set_icon_name("cancel-symbolic");
+				editbutton.set_icon_name("checkmark-symbolic");
+			} else {
+				tagname.set_sensitive(false);
+
+				deletebutton.set_icon_name("delete-symbolic");
+				editbutton.set_icon_name("edit-symbolic");
+			}
 		});
 
 		tagname.set_hexpand(true);
 
 		row.append(tagname);
+		row.append(editbutton);
 		row.append(deletebutton);
 
 		return row;

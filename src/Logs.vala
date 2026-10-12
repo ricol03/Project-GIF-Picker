@@ -4,16 +4,13 @@
  ****/
 
 public class Logs {
-	private string configDir = Environment.get_user_config_dir();
-	private string directory = "io.ricol03.gifpicker";
+	private Files files;
 	private string filename = "gifpicker.log";
 
 	public Logs() {}
 
 	public File checkLogFile() {
-		string settingsPath = Path.build_filename(configDir, directory, filename);
-
-		File file = File.new_for_path(settingsPath);
+		File file = files.checkFile(filename);
 		return file;
 	}
 
