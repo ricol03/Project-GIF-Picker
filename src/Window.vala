@@ -3,6 +3,8 @@
  * ricol03, 2026
  ****/
 
+using Gee;
+
 public class Window : Gtk.ApplicationWindow {
 
 	#if WINDOWS
@@ -47,7 +49,7 @@ public class Window : Gtk.ApplicationWindow {
 
 	private Gtk.MenuButton menubtn = null;
 	private Gtk.Button refreshbtn = null;
-	private Gtk.Button filterbtn = null;
+	private Gtk.MenuButton filterbtn = null;
 	private Gtk.Button backbtn = null;
 	private Gtk.Button nextbtn = null;
 	private Gtk.ToggleButton searchbtn = null;
@@ -56,10 +58,13 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.SignalListItemFactory factory = null;
 	private Gtk.FilterListModel filtered = null;
 	private Gtk.FilterListModel favoritesfiltered = null;
+	private Gtk.FilterListModel tagsfiltered = null;
 	private Gtk.SingleSelection selection = null;
 	private Gtk.SingleSelection favoritesselection = null;
+	private Gtk.SingleSelection tagsselection = null;
 	private Gtk.CustomFilter defaultfilter = null;
 	private Gtk.CustomFilter favoritesfilter = null;
+	private Gtk.CustomFilter tagsfilter = null;
 
 	private Gtk.SearchBar search = new Gtk.SearchBar();
 
@@ -68,6 +73,8 @@ public class Window : Gtk.ApplicationWindow {
 	private Gtk.Revealer revealer = null;
 
 	private string env = null;
+
+	private ArrayList<string> filterArray = new ArrayList<string>();
 
     public Window(Gtk.Application app) {
 		application = app;
@@ -303,6 +310,8 @@ public class Window : Gtk.ApplicationWindow {
     }
 
     public void refreshState() {
+		warning("refreshed");
+
         string path = files.getSetting("path");
 		warning("opath: " + path);
         string filePath = convertedFileName();
@@ -831,6 +840,32 @@ public class Window : Gtk.ApplicationWindow {
 		#endif
 	}
 
+	public void createTagsFilter() {
+
+		tagsfilter = new Gtk.CustomFilter((obj) => {
+			var gif = obj as Gif;
+			foreach (string tag in gif.tags) {
+				foreach (string filtered in filterArray) {
+					if (tag == filtered) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		});
+
+		tagsfiltered = new Gtk.FilterListModel(model, tagsfilter);
+
+		var tagsslice = new Gtk.SliceListModel(
+			tagsfiltered,
+			0,
+			sliceSize
+		);
+
+		tagsselection = new Gtk.SingleSelection(tagsfiltered);
+	}
+
     public void setModel() {
 		string[] empty = {};
 		model.remove_all();
@@ -841,6 +876,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		createDefaultFilter();
 		createFavoriteFilter();
+		createTagsFilter();
 
 		slice = new Gtk.SliceListModel(
 			filtered,
@@ -1067,6 +1103,65 @@ public class Window : Gtk.ApplicationWindow {
 		}
 	}
 
+	public void toggleTagsPanel(bool isActive) {
+		if (!isActive) {
+		    stack.set_visible_child_name("main");
+
+		    checkBackButton();
+		    checkNextButton((int)totalitems);
+
+		} else {
+		    stack.set_visible_child_name("panel");
+
+		    refreshTagsPanel();
+		}
+	}
+
+	public void refreshTagsPanel() {
+		tagsfilter.changed(Gtk.FilterChange.DIFFERENT);
+
+		var panel = (Gtk.Box)stack.get_child_by_name("panel");
+
+		if (panel.get_first_child() != null)
+		    panel.remove(panel.get_first_child());
+
+		if (tagsselection.get_n_items() == 0) {
+		    var label = new Gtk.Label(
+		        "No filtered GIFs to show. Please, try a different tag query."
+		    );
+
+		    var messagebox = new Gtk.CenterBox();
+		    messagebox.set_hexpand(true);
+		    messagebox.set_vexpand(true);
+
+		    var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+		    contentbox.set_valign(Gtk.Align.CENTER);
+
+		    contentbox.append(label);
+
+		    messagebox.set_center_widget(contentbox);
+
+		    panel.append(messagebox);
+
+		} else {
+		    var tagsview = new Gtk.GridView(
+		        tagsselection,
+		        factory
+		    );
+
+		    tagsview.set_min_columns(2);
+		    tagsview.set_max_columns(2);
+
+		    var scrolled = new Gtk.ScrolledWindow();
+		    scrolled.set_hexpand(true);
+		    scrolled.set_vexpand(true);
+
+		    scrolled.set_child(tagsview);
+
+		    panel.append(scrolled);
+		}
+	}
+
 	public void showNotification() {
 		var notification = new Notification("GIF Picker");
 		notification.set_body("GIF copied to clipboard.");
@@ -1121,15 +1216,76 @@ public class Window : Gtk.ApplicationWindow {
 		menubox.append("About", "app.about");
 		menubox.append("Quit", "app.quit");
 
+		menubtn = new Gtk.MenuButton() {
+			icon_name = "open-menu-symbolic",
+			primary = true,
+		};
+		menubtn.set_menu_model(menubox);
+		menubtn.set_tooltip_markup("Menu");
+
 		refreshbtn = new Gtk.Button() {
 			icon_name = "reload-symbolic",
 		};
 		refreshbtn.set_tooltip_markup("Refresh <span alpha='70%'>(Ctrl+R)</span>");
 
-		filterbtn = new Gtk.Button() {
+		filterbtn = new Gtk.MenuButton() {
 			icon_name = "filter-symbolic",
 		};
 		filterbtn.set_tooltip_markup("Filter <span alpha='70%'>(Alt+F)</span>");
+
+		var filterpopup = new Gtk.Popover();
+		var filterpopupbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 1);
+		
+
+		string content = "";
+
+		var scrolled = new Gtk.ScrolledWindow();
+		scrolled.set_child(filterpopupbox);
+		scrolled.set_max_content_height(145);
+		scrolled.set_propagate_natural_height(true);
+		scrolled.set_policy (
+			Gtk.PolicyType.NEVER,
+			Gtk.PolicyType.AUTOMATIC
+		);
+
+		filterpopup.set_child(scrolled);
+
+		try {
+			File file = files.checkFile("tags.conf");
+
+			FileUtils.get_contents(file.get_path(), out content);
+
+			if (content != "") {
+                foreach (string line in content.split("\n")) {
+                    if (line.strip() == "")
+                        continue;
+
+					var newcheck = new Gtk.CheckButton.with_label(line.strip());
+
+					newcheck.toggled.connect(() => {
+						if (newcheck.active == true) {
+							filterArray.add(newcheck.get_label());
+
+							toggleTagsPanel(true);
+						} else {
+							filterArray.remove(newcheck.get_label());
+
+							if (filterArray.is_empty)
+								toggleTagsPanel(false);
+							else
+								toggleTagsPanel(true);
+						}
+                    });
+
+					filterpopupbox.append(newcheck);
+				}
+			}
+
+		} catch (Error e) {
+			warning(e.message);
+		}
+
+		filterbtn.popover = filterpopup;
 
 		searchbtn = new Gtk.ToggleButton() {
 			icon_name = "search-symbolic",
@@ -1151,12 +1307,7 @@ public class Window : Gtk.ApplicationWindow {
 		};
 		favoritebtn.set_tooltip_markup("Favourite <span alpha='70%'>(Ctrl+F)</span>");
 
-		menubtn = new Gtk.MenuButton() {
-			icon_name = "open-menu-symbolic",
-			primary = true,
-		};
-		menubtn.set_menu_model(menubox);
-		menubtn.set_tooltip_markup("Menu");
+		
 
 		headerbar = new Gtk.HeaderBar() {
 			show_title_buttons = true

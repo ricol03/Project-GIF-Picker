@@ -240,7 +240,7 @@ public class Settings {
 				tagsbox.append(tagsinfo);
 			} else {
 				foreach (string line in content.split("\n")) {
-				tagsbox.append(addTag(tagsbox, line));
+					tagsbox.append(addTag(tagsbox, line));
 				}
 			}
 
