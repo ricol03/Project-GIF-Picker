@@ -12,9 +12,11 @@ public class Gifs {
 	private string filename = "index";
 	private string filePath;
 
-	public Gifs(string dirName) {
+	public Gifs(string? dirName) {
 		createDirs(dirName);
 	}
+
+	public Gifs.null() {}
 
 	public string createDirs(string name) {
 		string safeName = Path.get_basename(name);
@@ -28,36 +30,29 @@ public class Gifs {
 		return filePath;
 	}
 
+	public void saveModel(ListModel model) {
+		Gif[] gifList = new Gif[model.get_n_items()];
+
+		for (var i = 0; i < model.get_n_items(); i++) {
+			gifList[i] = (Gif) model.get_item(i);
+		}
+
+		saveGifs(gifList);
+	}
+
+	
 	public void saveGifs(Gif[] gifs) {
-		var existingGifs = new Gif[0];
-
-		// Check if the file exists and load existing data
-		if (File.new_for_path(filePath).query_exists()) {
-		    try {
-		        existingGifs = loadGifs();
-		    } catch (Error e) {
-		        files.writeToLog(new datetime.now_local().to_string() + " : Failed to load existing GIFs -> " + e.message + "\n");
-		    }
-		}
-
-		// Merge existing data with new data
-		var map = new HashTable<string, Gif>(str_hash, str_equal);
-		foreach (var gif in existingGifs) {
-		    if (gif.fileName != null)
-		        map.set(gif.fileName, gif);
-		}
-
-		foreach (var gif in gifs) {
-		    if (gif.fileName != null)
-		        map.set(gif.fileName, gif); // Overwrite or add new GIFs
-		}
-
-		// Save merged data
 		var builder = new Json.Builder();
 		builder.begin_array();
 
-		foreach (var gif in map.get_values()) {
-		    builder.add_value(gif.saveJson());
+		foreach (var gif in gifs) {
+			if (gif.fileName == null || gif.fileName == "") {
+				files.writeToLog("Skipping GIF: filename is null or empty\n");
+				continue;
+			}
+
+			files.writeToLog("Saving GIF: " + gif.fileName + "\n");
+			builder.add_value(gif.saveJson());
 		}
 
 		builder.end_array();
@@ -68,10 +63,14 @@ public class Gifs {
 
 		try {
 			generator.to_file(filePath);
+			files.writeToLog("GIF JSON saved successfully\n");
 		} catch (Error e) {
-			files.writeToLog(" : Failed to write JSON file -> " + e.message + "\n");
+			files.writeToLog(
+				"Failed to write JSON file: " + e.message + "\n"
+			);
 		}
 	}
+
 
 	public Gif[] loadGifs() {
 		files.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
@@ -97,14 +96,25 @@ public class Gifs {
 	}
 
 	public uint makeGifsSmall(Gtk.Picture picture, string filePath) {
-		Gdk.PixbufAnimation animation = null;
-		animation = new Gdk.PixbufAnimation.from_file(filePath);
-		//warning(filePath);
-		var iter = animation.get_iter(null);
-		var texture = Gdk.Texture.for_pixbuf(iter.get_pixbuf());
-		picture.set_paintable(texture);
+		try {
+			var animation = new Gdk.PixbufAnimation.from_file(filePath);
+			var iter = animation.get_iter(null);
+			var pixbuf = iter.get_pixbuf();
 
-		return 1;
+			if (pixbuf == null) {
+				warning("Could not decode GIF: %s", filePath);
+				return 0;
+			}
+
+			var texture = Gdk.Texture.for_pixbuf(pixbuf);
+			picture.set_paintable(texture);
+
+			return 1;
+
+		} catch (Error e) {
+			warning("Failed to load GIF '%s': %s", filePath, e.message);
+			return 0;
+		}
 	}
 
 	public void startGifAnimation(

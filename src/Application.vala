@@ -103,7 +103,7 @@ public class Application : Gtk.Application {
 		add_action(filter_action);
 		set_accels_for_action("app.filter", new string[] {"<Alt>f"});
 		filter_action.activate.connect(() => {
-			window.toggleFavoritePanel();
+			window.getFilterBtn().popup();
 		});
 
 
@@ -124,7 +124,9 @@ public class Application : Gtk.Application {
 
     protected override void activate() {
 		base.activate();
-		
+
+		folder = File.new_for_path(files.getSetting("path"));
+
 		files.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
 		var datetime = new GLib.DateTime.now_local();
 		files.writeToLog(new datetime.now_local().to_string() + " : started app\n");
@@ -134,5 +136,7 @@ public class Application : Gtk.Application {
 		files.createFile("tags.conf");
 
 		window = new Window(this);
+
+		files.checkFolderChanges(folder, window);
  	}
 }

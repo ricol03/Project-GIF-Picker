@@ -12,14 +12,167 @@ public class Files {
 	private static string tagsname = "tags.conf";
 	private static string logsname = "gifpicker.log";
 
+	private Gifs gifs;
+
 	private string tagsfile = Path.build_filename(configDir, directory, tagsname);
 	private string settingsfile = Path.build_filename(configDir, directory, settingsname);
 
+	private FileMonitor monitor;
+
 	public Files() {}
 
-	public string getTagsFilename() {
-		return tagsfile;
+	public void checkFolderChanges(File folder, Window window) {
+		if (gifs == null)
+			gifs = new Gifs(window.getConvertedName());
+
+		try {
+			monitor = folder.monitor_directory(
+				FileMonitorFlags.NONE,
+				null
+			);
+
+			monitor.changed.connect((file, other_file, event_type) => {
+				switch (event_type) {
+					case FileMonitorEvent.CREATED:
+						addNewGif.begin(file, window);
+						break;
+
+					case FileMonitorEvent.DELETED:
+						Gif gif = new Gif();
+
+						Idle.add(() => {
+							Gif check = null;
+
+							for (var i = 0; i < window.model.get_n_items(); i++) {
+								check = (Gif)window.model.get_item(i);
+
+								if (file.get_basename() == check.getFileName()) {
+									window.model.remove(i);
+									break;
+								}
+							}
+
+							window.checkNextButton((int)window.model.get_n_items());
+
+							Gif[] newGifList = new Gif[window.model.get_n_items()];
+
+							for (var i = 0; i < window.model.get_n_items(); i++)
+								newGifList[i] = (Gif)window.model.get_item(i);
+							
+							gifs.saveModel(window.model);
+
+							return Source.REMOVE;
+						});
+						break;
+
+					case FileMonitorEvent.CHANGED:
+						break;
+
+					default:
+						break;
+				}
+			});
+		} catch (Error e) {
+			warning("Could not monitor folder: %s", e.message);
+		}
 	}
+
+	private async void addNewGif(File file, Window window) {
+
+		if (!(yield waitForGif(file))) {
+			warning("GIF is not ready or invalid: %s", file.get_path());
+			return;
+		}
+
+		bool hasFile = false;
+
+		Gif gif = new Gif();
+
+		for (var i = 0; i < window.model.get_n_items(); i++) {
+
+			Gif check = (Gif)window.model.get_item(i);
+
+			if (file.get_basename() == check.getFileName()) {
+				hasFile = true;
+				break;
+			}
+		}
+
+		if (!hasFile) {
+			Idle.add(() => {
+				var newGif = new Gif.new(file.get_path(), file.get_basename(), file.get_basename(), false, gif.getDate(file.get_path()), null);
+
+				window.model.append(newGif);
+
+				window.checkNextButton((int)window.model.get_n_items());
+
+				Gif[] newGifList = new Gif[window.model.get_n_items()];
+
+				for (var i = 0; i < window.model.get_n_items(); i++)
+					newGifList[i] = (Gif)window.model.get_item(i);
+				
+				gifs.saveGifs(newGifList);
+
+				return Source.REMOVE;
+			});
+		}
+
+	}
+
+	private async bool waitForGif(File file) {
+		int64 previousSize = -1;
+		int checks = 0;
+
+		for (var i = 0; i < 50; i++) {
+			warning("hallo " + i.to_string());
+			try {
+				var info = file.query_info(FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
+
+				int64 size = info.get_size();
+
+				if (size > 0 && size == previousSize)
+					checks++;
+				else
+					checks = 0;
+
+				previousSize = size;
+
+				if (checks >= 3) {
+					try {
+						var animation = new Gdk.PixbufAnimation.from_file(file.get_path());
+						return true;
+					} catch (Error e) {
+						warning("File " + file.get_basename() + " not yet decodable");
+					}
+				}
+
+			} catch (Error e) {
+				warning("File " + file.get_basename() + " not yet available");
+			}
+
+			yield waitForTimeout(100);
+		}
+
+		return false;
+	}
+
+	private async void waitForTimeout(uint milliseconds) {
+		Timeout.add(milliseconds, () => {
+			waitForTimeout.callback();
+			return Source.REMOVE;
+		});
+		yield;
+	}
+
+	public void createThread(Window window, Gif[] newGifList) {
+		new Thread<void*>("worker", () => {
+
+			
+			
+			return null;
+		});
+	}
+
 
 	public bool hasFileContent(string filePath) {
 		try {
@@ -34,49 +187,6 @@ public class Files {
 		} catch (Error e) {
 		    return false;
 		}
-	}
-
-	public int getFileLines(string fileName) {
-		string? line = null;
-		int current = 1;
-
-		try {
-			var file = File.new_for_path(Path.build_filename(configDir, directory, fileName));
-			var dis = new DataInputStream(file.read());
-
-			while ((line = dis.read_line(null)) != null)
-				current++;
-
-		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
-		}
-
-		return current;
-	}
-
-	public File getFile(string path) {
-		return File.new_for_path(path);
-	}
-
-	public string? getSetting(string key) {
-		File file = checkSettingsFile();
-		if (file.query_exists()) {
-			try {
-				string content;
-				FileUtils.get_contents(file.get_path(), out content);
-
-				foreach (string line in content.split("\n")) {
-					if (line.has_prefix(key + "=")) {
-						writeToLog(new datetime.now_local().to_string() + " : setting retrieved: " + key + " - " + line.substring((key + "=").length) + "\n");
-						return line.substring((key + "=").length);
-					}
-				}
-			} catch (Error e) {
-				writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
-			}
-		}
-
-		return null;
 	}
 
 	public void createSettingsDirectory() {
@@ -220,11 +330,7 @@ public class Files {
 		return filePaths;
 	}
 
-	public async string[] getIndex(string folderPath) {
-		string[] paths = yield createFileIndex(folderPath);
-		return paths;
-	}
-
+	
 	public File checkLogFile() {
 		File file = checkFile(logsname);
 		return file;
@@ -244,4 +350,60 @@ public class Files {
 		data.put_string(content);
 		data.close();
 	}
+
+	//getters / setters
+
+	public string getTagsFilename() {
+		return tagsfile;
+	}
+
+	public async string[] getIndex(string folderPath) {
+		string[] paths = yield createFileIndex(folderPath);
+		return paths;
+	}
+
+	public File getFile(string path) {
+		return File.new_for_path(path);
+	}
+
+	public string? getSetting(string key) {
+		File file = checkSettingsFile();
+		if (file.query_exists()) {
+			try {
+				string content;
+				FileUtils.get_contents(file.get_path(), out content);
+
+				foreach (string line in content.split("\n")) {
+					if (line.has_prefix(key + "=")) {
+						writeToLog(new datetime.now_local().to_string() + " : setting retrieved: " + key + " - " + line.substring((key + "=").length) + "\n");
+						return line.substring((key + "=").length);
+					}
+				}
+			} catch (Error e) {
+				writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			}
+		}
+
+		return null;
+	}
+
+	public int getFileLines(string fileName) {
+		string? line = null;
+		int current = 1;
+
+		try {
+			var file = File.new_for_path(Path.build_filename(configDir, directory, fileName));
+			var dis = new DataInputStream(file.read());
+
+			while ((line = dis.read_line(null)) != null)
+				current++;
+
+		} catch (Error e) {
+			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+		}
+
+		return current;
+	}
+
+
 }

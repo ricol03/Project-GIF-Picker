@@ -83,8 +83,10 @@ public class Edit {
 
                     tagsswitchbox.append(newcheck);
                 }
+            } else {
+                tagsbutton.set_label("No tags available");
+                tagsbutton.set_sensitive(false);
             }
-
 
             // Checks the tags defined in the gif and checks them
             string[] giftags = checkGifTags(filepath, gifs);
@@ -103,7 +105,7 @@ public class Edit {
                     }
 
                     sibling = sibling.get_next_sibling();
-                }
+                } 
             }
         } catch (Error e) {
             warning (e.message);
@@ -127,14 +129,11 @@ public class Edit {
 
             string[] tags = {};
 
-            var vamoslaver = tagsswitch.get_first_child();
-            var aiai = vamoslaver.get_first_child();
+            var smallbox = tagsswitch.get_first_child();
+            var smallerbox = smallbox.get_first_child();
 
-            warning(vamoslaver.get_class().get_type().to_string());
-            warning(aiai.get_class().get_type().to_string());
-
-            var child = (Gtk.CheckButton)aiai.get_first_child();
-            var iterator = aiai.get_first_child();
+            var child = (Gtk.CheckButton)smallerbox.get_first_child();
+            var iterator = smallerbox.get_first_child();
             
             while (iterator != null) {
                 if (child is Gtk.CheckButton) {
@@ -151,26 +150,7 @@ public class Edit {
 
             gif.updateData(tags, gif.fileName, gifs.getFilePath());
 
-			/*var content = "";
-
-			for (
-				var child = tagsbox.get_first_child(); 
-				child != null; 
-				child = child.get_next_sibling()
-			) {
-				var aux = child.get_next_sibling();
-				if (!(child is Gtk.Label)) {
-					var entry = child.get_first_child();
-
-					if (entry is Gtk.Entry) {
-						content += entry.get_text();
-						if (aux != null)
-							content += "\n";
-					}
-				}
-			}
-
-			files.saveTagsFile(content);*/
+            
 
 		});
 
@@ -185,11 +165,11 @@ public class Edit {
 
         box.append(buttonsbox);
 
-        string windowtitle = "Properties of " + filename;
+        string windowtitle = "Properties of \"" + filename + "\"";
 
         mainwindow = new Gtk.ApplicationWindow(app) {
             child = box,
-			default_height = 500,
+			default_height = 250,
 			default_width = 400,
 			title = windowtitle
 		};

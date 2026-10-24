@@ -1,21 +1,15 @@
-/* * { */
-/*     background-color: #ffffff; */
-/*     box-shadow: none; */
-/* } */
-
-/* .window-frame { */
-/*   box-shadow: none; */
-/*   margin: 1; */
-/* } */
-
-.favourite-button {
+.gif-button {
     background-color: #000000;
     transition: 200ms;
 }
 
-.favourite-button:hover {
-	background-color: #2B2B2B;
+.gif-button:hover {
+	background-color: #4f4f4f;
     opacity: 1.0;
+}
+
+.gif-button image {
+    color: #FFFFFF;
 }
 
 .settings-title {

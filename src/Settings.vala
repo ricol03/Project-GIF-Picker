@@ -163,9 +163,11 @@ public class Settings {
 		mainwindow.present();
 
 		mainwindow.close_request.connect(() => {
-			if (clickedbutton)
+			if (clickedbutton) {
 				window.refreshState();
-			
+				window.refreshChecks();
+			}
+				
 			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
 			mainwindow.destroy();
 			return true;

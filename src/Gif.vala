@@ -10,27 +10,23 @@ public class Gif : Object {
 	public bool isFavorite { get; set; default = false; }
 	public string dateTime { get; set; }
 	public string[] tags { get; set; }
-	private GLib.DateTime date;
 	private Files files = new Files();
 
 	public Gif() {}
 
+	public Gif.new(string newFilePath, string newFileName, string? newDisplayName, 
+			bool? newIsFavorite, string newDateTime, string[]? newTags) {
+				
+		filePath = newFilePath;
+		fileName = newFileName;
+		displayName = newDisplayName;
+		isFavorite = newIsFavorite;
+		dateTime = newDateTime;
+		tags = newTags;
+	}
+
 	public Json.Node saveJson() {
 		var builder = new Json.Builder();
-
-		GLib.File file = File.new_for_path(filePath);
-
-        try {
-            FileInfo info = file.query_info(
-                "time::modified",
-                FileQueryInfoFlags.NONE
-            );
-
-			date = info.get_modification_date_time();
-
-		} catch (Error e) {
-            print("Error: %s\n", e.message);
-        }
 
 		builder.begin_object();
 
@@ -47,7 +43,7 @@ public class Gif : Object {
 		builder.add_boolean_value(isFavorite);
 
 		builder.set_member_name("dateTime");
-		builder.add_string_value(date.to_string());
+		builder.add_string_value(getDate(filePath));
 
 		builder.set_member_name("tags");
 		builder.begin_array();
@@ -76,6 +72,8 @@ public class Gif : Object {
 
 		if (obj.has_member("isFavorite"))
 		    gif.isFavorite = obj.get_boolean_member("isFavorite");
+
+		warning(gif._fileName + ": valor - " + gif._isFavorite.to_string());
 
 		if (obj.has_member("dateTime")) {
 		    string date = obj.get_string_member("dateTime");
@@ -159,9 +157,28 @@ public class Gif : Object {
 		}
 	}
 
-	// public string getFileName() {
-	// 	return fileName;
-	// }
+	public string getDate(string filePath) {
+		GLib.File file = File.new_for_path(filePath);
+		GLib.DateTime date = null;
+
+        try {
+            FileInfo info = file.query_info(
+                "time::modified",
+                FileQueryInfoFlags.NONE
+            );
+
+			date = info.get_modification_date_time();
+
+		} catch (Error e) {
+            print("Error: %s\n", e.message);
+        }
+
+		return date.to_string();
+	}
+
+	public string getFileName() {
+		return fileName;
+	}
 
 	// public void setFileName(string newFileName) {
 	// 	fileName = newFileName;
