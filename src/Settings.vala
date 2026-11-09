@@ -16,6 +16,7 @@ public class Settings {
 	private Gtk.Entry pathentry = new Gtk.Entry();
 	private Gtk.DropDown closeswitch;
 
+	private Gtk.Button editbutton;
 	private Gtk.Label tagsinfo;
 
 	public Settings(Gtk.Application app, Window window) {
@@ -52,8 +53,20 @@ public class Settings {
 		tagstitle.add_css_class("settings-title");
 		tagstitle.set_halign(Gtk.Align.START);
 
-		var addbutton = new Gtk.Button.from_icon_name("add-symbolic");
+		Gtk.Button addbutton;
+
+		#if WINDOWS
+			var addicon = new Gtk.Image.from_resource(
+				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Gnome-list-add.svg"
+			);
+
+			addbutton = new Gtk.Button();
+			addbutton.set_child(addicon);
+		#else
+			addbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+		#endif
 		addbutton.add_css_class("linked");
+		addbutton.set_tooltip_markup("Add new tag");
 
 		var titlecombo = makeRowTitle(tagstitle, addbutton);
 		var tagsframe = new Gtk.Frame(null);
@@ -67,6 +80,8 @@ public class Settings {
 		addbutton.clicked.connect(() => {
 			tagsbox.remove(tagsinfo);
 			tagsbox.append(addTag(tagsbox, null));
+
+			editbutton.clicked();
 		});
 
 		var scrolled = new Gtk.ScrolledWindow();
@@ -80,18 +95,19 @@ public class Settings {
 
 		createTagsSection(window, tagsframe, tagsbox);
 
-		var shortcutsframe = new Gtk.Frame("Shortcuts");
+		/*var shortcutsframe = new Gtk.Frame("Shortcuts");
 		var shortcutsbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 12) {
 			margin_top = 12,
 			margin_bottom = 12,
 			margin_start = 12,
 			margin_end = 12
-		};
+		};*/
 
 		var buttonsbox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
 		buttonsbox.set_halign(Gtk.Align.END);
 		
 		var cancelbutton = new Gtk.Button();
+		cancelbutton.set_size_request(100, -1);
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
@@ -100,41 +116,34 @@ public class Settings {
 		});
 
 		var applybutton = new Gtk.Button();
+		applybutton.set_size_request(100, -1);
 		applybutton.set_label("Apply");
 
 		applybutton.clicked.connect(() => {
-			files.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
-
-			files.saveSettingsFile("path", pathentry.get_text());
-			files.saveSettingsFile("revealer", "false");
-			files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
-
-			var content = "";
-
-			for (
-				var child = tagsbox.get_first_child(); 
-				child != null; 
-				child = child.get_next_sibling()
-			) {
-				var aux = child.get_next_sibling();
-				if (!(child is Gtk.Label)) {
-					var entry = child.get_first_child();
-
-					if (entry is Gtk.Entry) {
-						content += entry.get_text();
-						if (aux != null)
-							content += "\n";
-					}
-				}
-			}
-
-			files.saveTagsFile(content);
-
-			clickedbutton = true;
+			applyChanges(tagsbox);
 		});
 
+		var okbutton = new Gtk.Button();
+		okbutton.set_size_request(100, -1);
+		okbutton.set_label("OK");
+
+		okbutton.clicked.connect(() => {
+			applyChanges(tagsbox);
+
+			if (clickedbutton) {
+				window.refreshState();
+				window.refreshChecks();
+			}
+				
+			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
+			mainwindow.destroy();
+		});
+
+		buttonsbox.append(okbutton);
 		buttonsbox.append(cancelbutton);
 		buttonsbox.append(applybutton);
+
+		buttonsbox.set_spacing(10);
 
 		topbox.append(generaltitle);
 		topbox.append(generalframe);
@@ -174,6 +183,44 @@ public class Settings {
 		});
 	}
 
+	private void applyChanges(Gtk.Box tagsbox) {
+		files.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
+
+		files.saveSettingsFile("path", pathentry.get_text());
+		files.saveSettingsFile("revealer", "false");
+		files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
+
+		var content = "";
+
+		for (
+			var child = tagsbox.get_first_child();
+			child != null;
+		) {
+			var next = child.get_next_sibling();
+
+			if (!(child is Gtk.Label)) {
+				var entry = (Gtk.Entry) child.get_first_child();
+
+				if (entry.text.strip() != "") {
+					content += entry.text;
+					if (next != null)
+						content += "\n";
+				} else {
+					tagsbox.remove(child);
+
+					if (tagsbox.get_first_child() == null)
+						addTagsSectionMessage(tagsbox);
+				}
+			}
+
+			child = next;
+		}
+
+		files.saveTagsFile(content);
+
+		clickedbutton = true;
+	}
+
 	private void createGeneralSection(Window window, Gtk.Frame generalframe, Gtk.Box generalbox) {
 		var combobox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
 
@@ -188,8 +235,20 @@ public class Settings {
 		if (filename != null)
 			pathentry.set_text(filename);
 
-		var pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+		Gtk.Button pathbutton;
+
+		#if WINDOWS
+			var pathicon = new Gtk.Image.from_resource(
+				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Gnome-document-open.svg"
+			);
+
+			pathbutton = new Gtk.Button();
+			pathbutton.set_child(pathicon);
+		#else
+			pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+		#endif
 		pathbutton.add_css_class("linked");
+		pathbutton.set_tooltip_markup("Select path using File Explorer");
 
 		File? newfile = null;
 		pathbutton.clicked.connect(() => {
@@ -217,7 +276,11 @@ public class Settings {
 
 		if (file.query_exists()) {
 			var num = files.getSetting("labels");
-			closeswitch.set_selected(int.parse(num));
+
+			if (num != null)
+				closeswitch.set_selected(int.parse(num));
+			else
+				closeswitch.set_selected(int.parse("0"));
 		}
 
 		var closerow = makeRow("Label presentation", closeswitch);
@@ -238,8 +301,7 @@ public class Settings {
 			FileUtils.get_contents(file.get_path(), out content);
 
 			if (content == "") {
-				tagsinfo = new Gtk.Label("No tags available, click the \"+\" button to add one."); 
-				tagsbox.append(tagsinfo);
+				addTagsSectionMessage(tagsbox);
 			} else {
 				foreach (string line in content.split("\n")) {
 					tagsbox.append(addTag(tagsbox, line));
@@ -251,6 +313,11 @@ public class Settings {
 		}
 
 		tagsframe.set_child(tagsbox);
+	}
+
+	private void addTagsSectionMessage(Gtk.Box tagsbox) {
+		tagsinfo = new Gtk.Label("No tags available, click the \"+\" button to add one."); 
+		tagsbox.append(tagsinfo);
 	}
 
 	private Gtk.Widget makeRow(string title, Gtk.Widget control) {
@@ -295,14 +362,39 @@ public class Settings {
 		if (name != null && name != "") 
 			tagname.set_text(name);
 
-		var deletebutton = new Gtk.Button.from_icon_name("delete-symbolic");
-		deletebutton.add_css_class("linked");
+		Gtk.Button deletebutton;
 
-		var editbutton = new Gtk.Button.from_icon_name("edit-symbolic");
+		#if WINDOWS
+			var deleteicon = new Gtk.Image.from_resource(
+				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/User-trash.svg"
+			);
+
+			deletebutton = new Gtk.Button();
+			deletebutton.set_child(deleteicon);
+		#else
+			deletebutton = new Gtk.Button.from_icon_name("delete-symbolic");
+		#endif
+		deletebutton.set_data<string> ("action", "delete");
+		deletebutton.add_css_class("linked");
+		deletebutton.set_tooltip_markup("Delete tag");
+
+		#if WINDOWS
+			var editicon = new Gtk.Image.from_resource(
+				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Gnome-edit.svg"
+			);
+
+			editbutton = new Gtk.Button();
+			editbutton.set_child(editicon);
+			
+		#else
+			editbutton = new Gtk.Button.from_icon_name("edit-symbolic");
+		#endif
+		editbutton.set_data<string> ("action", "edit");
 		editbutton.add_css_class("linked");
+		editbutton.set_tooltip_markup("Edit tag name");
 
 		deletebutton.clicked.connect(() => {
-			if (deletebutton.get_icon_name() == "delete-symbolic") {
+			if (deletebutton.get_data<string> ("action") == "delete") {
 				tagsbox.remove(row);
 
 				if (tagsbox.get_first_child() == null) {
@@ -311,28 +403,80 @@ public class Settings {
 				}
 
 			} else {
+				editbutton.set_data<string> ("action", "edit");
+				deletebutton.set_data<string> ("action", "delete");
+
 				tagname.set_text(tempname);
-
 				tagname.set_sensitive(false);
+				editbutton.set_tooltip_markup("Edit tag name");
+				deletebutton.set_tooltip_markup("Delete tag");
 
-				deletebutton.set_icon_name("delete-symbolic");
-				editbutton.set_icon_name("edit-symbolic");
+
+				#if WINDOWS
+					deletebutton.set_child(deleteicon);
+					editbutton.set_child(editicon);
+				#else
+					deletebutton.set_icon_name("delete-symbolic");
+					editbutton.set_icon_name("edit-symbolic");
+				#endif
+
 			}
 		});
 
 		editbutton.clicked.connect(() => {
-			if (editbutton.get_icon_name() == "edit-symbolic") {
+			if (editbutton.get_data<string> ("action") == "edit") {
+				editbutton.set_data<string> ("action", "check");
+				deletebutton.set_data<string> ("action", "cancel");
+
+				editbutton.set_tooltip_markup("Confirm changes");
+				deletebutton.set_tooltip_markup("Cancel changes");
+
 				tempname = tagname.get_text();
 
 				tagname.set_sensitive(true);
+				tagname.grab_focus();
 
-				deletebutton.set_icon_name("cancel-symbolic");
-				editbutton.set_icon_name("checkmark-symbolic");
+				#if WINDOWS
+					var cancelicon = new Gtk.Image.from_resource(
+						"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Edit-delete.svg"
+					);
+					var checkmarkicon = new Gtk.Image.from_resource(
+						"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Dialog-apply.svg"
+					);
+
+					deletebutton.set_child(cancelicon);
+					editbutton.set_child(checkmarkicon);
+				#else
+					deletebutton.set_icon_name("cancel-symbolic");
+					editbutton.set_icon_name("checkmark-symbolic");
+				#endif
 			} else {
+				editbutton.set_data<string> ("action", "edit");
+				deletebutton.set_data<string> ("action", "delete");
+
+				editbutton.set_tooltip_markup("Confirm changes");
+				deletebutton.set_tooltip_markup("Cancel changes");
+
 				tagname.set_sensitive(false);
 
-				deletebutton.set_icon_name("delete-symbolic");
-				editbutton.set_icon_name("edit-symbolic");
+				#if WINDOWS
+					deleteicon = new Gtk.Image.from_resource(
+						"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/User-trash.svg"
+					);
+
+					editicon = new Gtk.Image.from_resource(
+						"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/win/Gnome-edit.svg"
+					);
+
+					deletebutton.set_child(deleteicon);
+					editbutton.set_child(editicon);
+				#else
+					editbutton.set_tooltip_markup("Edit tag name");
+					deletebutton.set_tooltip_markup("Delete tag");
+					
+					deletebutton.set_icon_name("delete-symbolic");
+					editbutton.set_icon_name("edit-symbolic");
+				#endif
 			}
 		});
 

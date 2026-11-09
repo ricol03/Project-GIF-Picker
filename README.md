@@ -1,7 +1,7 @@
 # Project GIF Picker
 ![Placeholder logo](doc/logo.svg)
 
-This GTK app pretends to be a small but effective tool to have a local GIF library easily accessible. It allows the user to copy the pretended GIF to the clipboard, as well as to search through the library, to effectively go through large folders.
+This GTK app pretends to be a small but effective tool to have a local GIF library easily accessible. It allows the user to copy the pretended GIF to the clipboard, as well as to search through the library - with text search, favourite list and text tags -, to effectively go through large folders.
 
 ## Screenshots
 
@@ -44,7 +44,7 @@ meson install -C <your build directory e.g. builddir>
 
 ### Microsoft Windows (cross-compilation)
 
-Depending on your Linux distro, or whether you're using WSL or MSYS2, make sure to have meson, ninja and valac installed. From there, use the windows-cross.txt file and do the following command:
+Depending on your Linux distro, or whether you're using WSL or MSYS2, make sure to have meson, ninja and valac installed. From there, use the windows-cross-amd64.txt file - windows-cross-arm32.txt doesn't work for now - and do the following command:
 
 ```meson setup <your build directory e.g. builddir> --cross-file windows-cross.txt```
 

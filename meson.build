@@ -30,6 +30,11 @@ project_gif_picker_sources = [
 if host_machine.system() == 'windows'
 	project_gif_picker_sources += files('src/windows/WinClipboard.c')
 	add_project_arguments('-D', 'WINDOWS', language: 'vala')
+
+    windows = import('windows')
+    win_resources = windows.compile_resources('data/app.rc')
+else
+    win_resources = []
 endif
 
 gresource = gnome.compile_resources(
@@ -51,6 +56,7 @@ install_data(
 executable(
     meson.project_name(),
     project_gif_picker_sources,
+    win_resources,
     gresource,
     dependencies: [
         dependency('gtk4'),
@@ -64,6 +70,7 @@ executable(
         #dependency('libportal')
     ],
     include_directories: inc,
+    win_subsystem: 'windows',
     install: true
 )
 

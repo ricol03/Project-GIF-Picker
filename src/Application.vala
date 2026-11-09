@@ -10,7 +10,6 @@ public class Application : Gtk.Application {
 	private About about = new About();
 	private string[] filePaths = null;
  	private Window window = null;
-	private File folder;
 
 	const string PORTAL_NAME = "org.freedesktop.portal.Desktop";
 	const string PORTAL_PATH = "/org/freedesktop/portal/desktop";
@@ -56,7 +55,7 @@ public class Application : Gtk.Application {
 		add_action(refresh_action);
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
 		refresh_action.activate.connect(() => {
-			files.createFileIndex.begin(folder.get_path(), (obj, res) => {
+			files.createFileIndex.begin(files.getFolder().get_path(), (obj, res) => {
 				try {
 					filePaths = files.createFileIndex.end(res);
 					window.setGifList();
@@ -125,7 +124,7 @@ public class Application : Gtk.Application {
     protected override void activate() {
 		base.activate();
 
-		folder = File.new_for_path(files.getSetting("path"));
+		files.setFolder(File.new_for_path(files.getSetting("path")));
 
 		files.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
 		var datetime = new GLib.DateTime.now_local();
@@ -135,8 +134,6 @@ public class Application : Gtk.Application {
 		files.createSettingsFile();
 		files.createFile("tags.conf");
 
-		window = new Window(this);
-
-		files.checkFolderChanges(folder, window);
- 	}
+		window = new Window(this, files);
+	}
 }

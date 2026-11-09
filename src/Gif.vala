@@ -43,8 +43,12 @@ public class Gif : Object {
 		builder.add_boolean_value(isFavorite);
 
 		builder.set_member_name("dateTime");
-		builder.add_string_value(getDate(filePath));
 
+		string date = getDate(filePath);
+		if (date != "" || date != null) {
+			builder.add_string_value(getDate(filePath));
+		}
+		
 		builder.set_member_name("tags");
 		builder.begin_array();
 
@@ -73,8 +77,6 @@ public class Gif : Object {
 		if (obj.has_member("isFavorite"))
 		    gif.isFavorite = obj.get_boolean_member("isFavorite");
 
-		warning(gif._fileName + ": valor - " + gif._isFavorite.to_string());
-
 		if (obj.has_member("dateTime")) {
 		    string date = obj.get_string_member("dateTime");
 
@@ -96,10 +98,10 @@ public class Gif : Object {
 			gif.tags = result;
 		}
 
-
 		return gif;
 	}
 
+	// updates the gif data
 	public void updateData(string[] newtags, string gifname, string filePath) {
 		try {
 			Json.Object? targetObject = null;
@@ -174,6 +176,10 @@ public class Gif : Object {
         }
 
 		return date.to_string();
+	}
+
+	public string getDateTime() {
+		return dateTime;
 	}
 
 	public string getFileName() {

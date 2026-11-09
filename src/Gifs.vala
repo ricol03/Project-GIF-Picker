@@ -34,7 +34,7 @@ public class Gifs {
 		Gif[] gifList = new Gif[model.get_n_items()];
 
 		for (var i = 0; i < model.get_n_items(); i++) {
-			gifList[i] = (Gif) model.get_item(i);
+			gifList[i] = (Gif)model.get_item(i);
 		}
 
 		saveGifs(gifList);
@@ -117,18 +117,10 @@ public class Gifs {
 		}
 	}
 
-	public void startGifAnimation(
-		Gtk.Picture picture,
-		GifState state
-	) {
+	public void startGifAnimation(Gtk.Picture picture, GifState state) {
 		// Already playing
 		if (state.timeout_id != 0)
 		    return;
-
-		if (state.filepath == null) {
-		    warning("vai mas é trabalhar, ó");
-		    return;
-		}
 
 		try {
 		    state.animation =
@@ -151,11 +143,7 @@ public class Gifs {
 		scheduleNextFrame(picture, state);
 	}
 
-	private void scheduleNextFrame(
-		Gtk.Picture picture,
-		GifState state
-	) 
-  {
+	private void scheduleNextFrame(Gtk.Picture picture, GifState state) {
 		if (state.iter == null)
 		    return;
 
@@ -181,11 +169,7 @@ public class Gifs {
 		);
 	}
 
-	public void stopGifAnimation(
-		Gtk.Picture picture,
-		GifState state
-	) 
-	{
+	public void stopGifAnimation(Gtk.Picture picture, GifState state) {
 		if (state.timeout_id != 0) {
 			Source.remove(state.timeout_id);
 			state.timeout_id = 0;

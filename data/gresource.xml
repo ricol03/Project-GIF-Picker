@@ -6,6 +6,22 @@
 		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/document-edit-symbolic.svg</file>
     	<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/starred-symbolic.svg</file>
 		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/non-starred-symbolic.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Dialog-apply.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Edit-delete.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Emblem-star.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-document-open.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-edit.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-emblem-documents.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-go-next.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-go-previous.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-list-add.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-list-remove.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/Gnome-view-refresh.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/System-search.svg</file>
+		<file compressed="true" preprocess="xml-stripblanks">icons/hicolor/scalable/actions/win/User-trash.svg</file>
+
+
+
   		<file>icons/hicolor/scalable/actions/gifpicker.png</file>
 	</gresource>
 	<gresource prefix="/io/ricol03/gifpicker/style">

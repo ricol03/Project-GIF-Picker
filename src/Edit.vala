@@ -3,14 +3,16 @@
  * ricol03, 2026
  ****/
 
-public class Edit {
+public class Edit : Object {
+    public signal void closed();
+
     private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	private Gtk.ApplicationWindow mainwindow;
     private Files files = new Files();
 
     public Edit(Gtk.Application app, Window window, 
-        string filepath, string filename, string datetime, Gif gif, Gifs gifs) {
+        string filepath, string filename, string? datetime, Gif gif, Gifs gifs) {
 
         Gtk.Box box = new Gtk.Box(Gtk.Orientation.VERTICAL, 2) {
 			margin_top = 20,
@@ -26,20 +28,20 @@ public class Edit {
         box.append(makeRow("Filename", filenameentry));
 
         var friendlynameentry = new Gtk.Entry();
-        friendlynameentry.set_placeholder_text("e.g. Nagisa smile");
+        friendlynameentry.set_placeholder_text("(not implemented)");
+        //friendlynameentry.set_placeholder_text("e.g. Cool GIF");
+        friendlynameentry.set_sensitive(false);
 
         box.append(makeRow("Display name", friendlynameentry));
 
         var datetimeentry = new Gtk.Entry();
-        
-        DateTime? date = new DateTime.from_iso8601(datetime, null);
 
-        datetimeentry.set_placeholder_text(date.format("%Y-%m-%d %H:%M:%S"));
-
-        if (date == null) {
+        if (datetime != null) {
+            DateTime? date = new DateTime.from_iso8601(datetime, null);
+            datetimeentry.set_placeholder_text(date.format("%Y-%m-%d %H:%M:%S"));
+        } else
             datetimeentry.set_placeholder_text("(no date and time available)");
-        }
-       
+        
         datetimeentry.set_sensitive(false);
 
         box.append(makeRow("Date and time", datetimeentry));
@@ -115,7 +117,41 @@ public class Edit {
 
         var buttonsbox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
 		buttonsbox.set_halign(Gtk.Align.END);
+
+
+        var okbutton = new Gtk.Button();
+		okbutton.set_size_request(100, -1);
+		okbutton.set_label("OK");
+
+		okbutton.clicked.connect(() => {
+			string[] tags = {};
+
+            var smallbox = tagsswitch.get_first_child();
+            var smallerbox = smallbox.get_first_child();
+
+            var child = (Gtk.CheckButton)smallerbox.get_first_child();
+            var iterator = smallerbox.get_first_child();
+            
+            while (iterator != null) {
+                if (child is Gtk.CheckButton) {
+                    if (((Gtk.CheckButton) child).active) {
+                        tags += child.label;
+                        warning(child.label);
+                    }    
+                }
+
+                child = (Gtk.CheckButton)iterator.get_next_sibling();
+                iterator = (Gtk.Widget)child;
+            }
+
+            gif.updateData(tags, gif.fileName, gifs.getFilePath());
+            gif.tags = tags;
+
+			mainwindow.destroy();
+		});
+
         var cancelbutton = new Gtk.Button();
+        cancelbutton.set_size_request(100, -1);
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
@@ -123,6 +159,7 @@ public class Edit {
 		});
 
 		var applybutton = new Gtk.Button();
+        applybutton.set_size_request(100, -1);
 		applybutton.set_label("Apply");
 
 		applybutton.clicked.connect(() => {
@@ -140,8 +177,7 @@ public class Edit {
                     if (((Gtk.CheckButton) child).active) {
                         tags += child.label;
                         warning(child.label);
-                    }
-                        
+                    }    
                 }
 
                 child = (Gtk.CheckButton)iterator.get_next_sibling();
@@ -150,12 +186,13 @@ public class Edit {
 
             gif.updateData(tags, gif.fileName, gifs.getFilePath());
 
-            
-
 		});
 
+        buttonsbox.append(okbutton);
         buttonsbox.append(cancelbutton);
 		buttonsbox.append(applybutton);
+
+        buttonsbox.set_spacing(10);
 
         box.append(makeRow("Tags", tagsbutton));
 
@@ -173,7 +210,14 @@ public class Edit {
 			default_width = 400,
 			title = windowtitle
 		};
+        mainwindow.set_transient_for(window);
         mainwindow.set_resizable(false);
+		mainwindow.set_modal(true);
+
+        mainwindow.close_request.connect(() => {
+            closed();
+            return false; // allow the window to close
+        });
 
         mainwindow.present();
     }
@@ -209,8 +253,6 @@ public class Edit {
 			for (uint i = 0; i < files.get_length(); i++) {
 				var item = files.get_object_element(i);
 
-                warning("gifname : " + gifPath);
-
 				if (item.has_member("filePath") &&
 					item.get_string_member("filePath") == gifPath) {
 					targetObject = item;
@@ -235,11 +277,11 @@ public class Edit {
 				}
 
 			} else {
-				print("File not found in JSON: %s\n", gifPath);
+				warning("File not found in JSON: %s\n", gifPath);
 			}
 
 		} catch (Error e) {
-			print("Failed to update JSON: %s\n", e.message);
+			warning("Failed to update JSON: %s\n", e.message);
 		}
 
         return null;

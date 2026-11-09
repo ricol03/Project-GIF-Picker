@@ -6,6 +6,7 @@ build-winarm32/
 builddir/
 dist/
 repo/
+usability/
 
 .flatpak-builder
 .vscode/

@@ -11,6 +11,8 @@ public class Files {
 	private static string settingsname = "settings.conf";
 	private static string tagsname = "tags.conf";
 	private static string logsname = "gifpicker.log";
+	private File folder;
+	private File gifFolder;
 
 	private Gifs gifs;
 
@@ -124,7 +126,6 @@ public class Files {
 		int checks = 0;
 
 		for (var i = 0; i < 50; i++) {
-			warning("hallo " + i.to_string());
 			try {
 				var info = file.query_info(FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
 
@@ -363,6 +364,13 @@ public class Files {
 	}
 
 	public File getFile(string path) {
+		try {
+			var file = File.new_for_path (path);
+			file.create(FileCreateFlags.NONE);
+		} catch (Error e) {
+			warning (e.message);
+		}
+
 		return File.new_for_path(path);
 	}
 
@@ -405,5 +413,11 @@ public class Files {
 		return current;
 	}
 
+	public File getFolder() {
+		return folder;
+	}
 
+	public void setFolder(File newFolder) {
+		folder = newFolder;
+	}
 }
