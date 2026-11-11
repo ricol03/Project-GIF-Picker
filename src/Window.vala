@@ -12,18 +12,15 @@ public class Window : Gtk.ApplicationWindow {
 		private extern static int setWindowsClipboardNative(string filepath);
 	#endif
 
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
-
-	private Gtk.Application application = new Application();
-	private Dialogs dialog = new Dialogs();
+	private Gtk.Application application;
+	private Dialogs dialog;
 	private Gifs gifs;
 	private Files files;
 	private string[] filePaths;
-	private Gif gif;
 	private Gif[] gifList;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "GIF Picker";
-	private Gtk.IconTheme theme;
+	//private Gtk.IconTheme theme;
 	private Gtk.Stack stack = new Gtk.Stack();
 	private Gtk.Overlay overlay = new Gtk.Overlay();
 	private Gtk.Spinner spinner;
@@ -36,7 +33,7 @@ public class Window : Gtk.ApplicationWindow {
 
 	private Gdk.Cursor cursorHand = new Gdk.Cursor.from_name("pointer", null);
 	private Gdk.Cursor cursorDefault = new Gdk.Cursor.from_name("default", null);
-	private Gdk.Cursor cursorProhibited = new Gdk.Cursor.from_name("not-allowed", null);
+	//private Gdk.Cursor cursorProhibited = new Gdk.Cursor.from_name("not-allowed", null);
 	public ListStore model = new ListStore(typeof(Gif));
 
 	private uint visibleStart = 0;
@@ -81,9 +78,10 @@ public class Window : Gtk.ApplicationWindow {
 	private ArrayList<string> filterArray = new ArrayList<string>();
 
 	// main window logic
-    public Window(Gtk.Application app, Files newFiles) {
+    public Window(Gtk.Application app, Files files) {
 		application = app;
-		files = newFiles;
+		this.files = files;
+		this.dialog = new Dialogs(files);
 
 		loadingFromFile();
 
@@ -104,7 +102,7 @@ public class Window : Gtk.ApplicationWindow {
 			Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
 		);
 
-		var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
+		//var icontheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
 
 		// env = GLib.Environment.get_variable("XDG_CURRENT_DESKTOP");
 		// if (env != "GNOME")
@@ -154,57 +152,14 @@ public class Window : Gtk.ApplicationWindow {
 
 		overlay.add_overlay(spinner);
 
-		//  #if WINDOWS
-		//  mainwindow = new Gtk.ApplicationWindow(app) {
-		//  	child = overlay,
-		//  	default_height = 480,
-		//  	default_width = 640,
-		//  	title = windowtitle
-		//  };
-
-		//  var menubar = new Menu();
-
-		//  var filemenu = new Menu();
-		//  filemenu.append("Refresh", "app.refresh");
-		//  filemenu.append("Quit", "app.quit");
-
-		//  var favmenu = new Menu();
-		//  favmenu.append("Favourites", "app.favorite");
-
-		//  var navmenu = new Menu();
-		//  navmenu.append("Back", "app.back");
-		//  navmenu.append("Next", "app.next");
-
-		//  var searchmenu = new Menu();
-		//  searchmenu.append("Search", "app.search");
-
-		//  var settingsmenu = new Menu();
-		//  settingsmenu.append("Settings", "app.settings");
-
-		//  var helpmenu = new Menu();
-		//  helpmenu.append("About", "app.about");
-
-		//  menubar.append_submenu("File", filemenu);
-		//  menubar.append_submenu("Favourites", favmenu);
-		//  menubar.append_submenu("Navigation", navmenu);
-		//  menubar.append_submenu("Search", searchmenu);
-		//  menubar.append_submenu("Settings", settingsmenu);
-		//  menubar.append_submenu("Help", helpmenu);
-
-		//  application.set_menubar(menubar);
-
-		//  mainwindow.set_show_menubar(true);
-
-		//#else
-			mainwindow = new Gtk.ApplicationWindow(app) {
-				child = overlay,
-				titlebar = headerbar,
-				default_height = 480,
-				default_width = 640,
-				title = windowtitle
-			};
-		//#endif
-
+		mainwindow = new Gtk.ApplicationWindow(app) {
+			child = overlay,
+			titlebar = headerbar,
+			default_height = 480,
+			default_width = 640,
+			title = windowtitle
+		};
+		
 		mainwindow.set_decorated(true);
 
 		var entry = new Gtk.SearchEntry();
@@ -261,16 +216,14 @@ public class Window : Gtk.ApplicationWindow {
 				mainbox.append(scrolled);
 			}
 
-			files.writeToLog(new datetime.now_local().to_string() + " : filter changed -> " + filter + "\n");
+			files.writeToLog("Filter changed -> " + filter + "\n");
 		});
 
 		// TODO: after having a global tray icon / keyboard shortcut working
 		mainwindow.close_request.connect(() => {
 			//gifs.saveGifs(gifList);
-			files.writeToLog( new datetime.now_local().to_string() + " : closed app\n");
-			files.writeToLog("////////////////////////// finished run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n\n");
+			files.writeToLog("Closed app\n");
 
-		 	//mainwindow.hide();
 		 	mainwindow.destroy();
 		 	return true;
 		});
@@ -294,7 +247,7 @@ public class Window : Gtk.ApplicationWindow {
 		string? path = files.getSetting ("path");
 
 		if (path == null || path.strip () == "") {
-			warning ("No folder path is set");
+			files.writeToLog ("No folder path is set");
 			return;
 		}
 
@@ -315,7 +268,7 @@ public class Window : Gtk.ApplicationWindow {
 		if (convertedName.contains(" "))
 			convertedName = convertedName.replace(" ", "-");
 
-		gifs = new Gifs(convertedName);
+		gifs = new Gifs(files, convertedName);
 
 		return gifs.createDirs(convertedName);
 	}
@@ -352,57 +305,52 @@ public class Window : Gtk.ApplicationWindow {
 			setSpinner(true);
 
             files.getIndex.begin(path, (obj, res) => {
-                try {
-                    filePaths = files.getIndex.end(res);
-                    totalitems = filePaths.length;
+				filePaths = files.getIndex.end(res);
+				totalitems = filePaths.length;
 
-                    var map = new HashTable<string, Gif>(str_hash, str_equal);
-                    foreach (var gif in gifList) {
-                        if (gif.fileName != null)
-                            map.set(gif.fileName, gif);
-                    }
+				var map = new HashTable<string, Gif>(str_hash, str_equal);
+				foreach (var gif in gifList) {
+					if (gif.fileName != null)
+						map.set(gif.fileName, gif);
+				}
 
-                    totalitems = filePaths.length;
-                    gifList = new Gif[totalitems];
+				totalitems = filePaths.length;
+				gifList = new Gif[totalitems];
 
-                    for (int i = 0; i < filePaths.length; i++) {
-                        string filepath = filePaths[i];
-						string fileName = Path.get_basename(filepath);
+				for (int i = 0; i < filePaths.length; i++) {
+					string filepath = filePaths[i];
+					string fileName = Path.get_basename(filepath);
 
-						if (map.contains(fileName)) {
-					        // existing → reuse (keeps favorite + displayName)
-							gifList[i] = map.get(fileName);
-							gifList[i].filePath = filepath; // update path if necessary
-						} else {
-							// new file → create default
-							var gif = new Gif();
-							gif.filePath = filepath;
-							gif.fileName = fileName;
-							gif.displayName = fileName;
-							gif.dateTime = gif.getDate(filepath);
-							gif.isFavorite = false;
-							gif.tags = null;
-							gifList[i] = gif;
-						}
-                    }
+					if (map.contains(fileName)) {
+						// existing → reuse (keeps favorite + displayName)
+						gifList[i] = map.get(fileName);
+						gifList[i].filePath = filepath; // update path if necessary
+					} else {
+						// new file → create default
+						var gif = new Gif();
+						gif.filePath = filepath;
+						gif.fileName = fileName;
+						gif.displayName = fileName;
+						gif.dateTime = gif.getDate(filepath);
+						gif.isFavorite = false;
+						gif.tags = null;
+						gifList[i] = gif;
+					}
+				}
 
-                    // Only save if there are changes to avoid overwriting user modifications
-                    if (gifList.length > 0) {
-                        gifs.saveGifs(gifList);
-                    }
+				// Only save if there are changes to avoid overwriting user modifications
+				if (gifList.length > 0) {
+					gifs.saveGifs(gifList);
+				}
 
-                    setModel();
-                    setFactory();
-                    setGifList();
-
-                } catch (Error e) {
-                    files.writeToLog(new datetime.now_local().to_string() + " : (refreshState) " + e.message + "\n");
-                }
+				setModel();
+				setFactory();
+				setGifList();
             });
         } else
             setWindowContent();
 
-        files.writeToLog(new datetime.now_local().to_string() + " : window state refreshed\n");
+        files.writeToLog("Window state refreshed\n");
     }
 
 	// sets the actual gif list in the main window
@@ -441,7 +389,7 @@ public class Window : Gtk.ApplicationWindow {
 		// 	var item = selection.get_model().get_item(position) as Gtk.StringObject;
 		// 	var filename = item.get_string();
 
-		// 	files.writeToLog(new datetime.now_local().to_string() + " : gif clicked -> " + filename + "\n");
+		// 	files.writeToLog("gif clicked -> " + filename + "\n");
 
 		// 	setClipboard(filename);
 		// });
@@ -455,7 +403,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(scrolled);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : gif list set\n");
+		files.writeToLog("GIF list set\n");
 	}
 
 	private bool isInsideWidget(Gtk.Widget? child, Gtk.Widget parent) {
@@ -528,17 +476,6 @@ public class Window : Gtk.ApplicationWindow {
 			box.append(overlay);
 			box.append(label);
 
-			/*var editmotion = new Gtk.EventControllerMotion();
-			editmotion.enter.connect(() => {
-				mainwindow.set_cursor(cursorProhibited);
-			});
-
-			editmotion.leave.connect(() => {
-				mainwindow.set_cursor(cursorHand);
-			});
-
-			editButton.add_controller(editmotion);*/
-
 			listitem.set_data("picture", picture);
 			listitem.set_data("favoritebutton", favoriteButton);
 			listitem.set_data("editbutton", editButton);
@@ -557,7 +494,7 @@ public class Window : Gtk.ApplicationWindow {
 			var box = (Gtk.Box) listitem.get_child();
 			box.set_focusable(true);
 
-			var overlay = (Gtk.Overlay)box.get_first_child();
+			//var overlay = (Gtk.Overlay)box.get_first_child();
 			var picture = listitem.get_data<Gtk.Picture>("picture");
 
 			var state = new GifState(filepath);
@@ -600,41 +537,18 @@ public class Window : Gtk.ApplicationWindow {
 				updateFavoriteButton(favoriteButton, gif);
 			});
 
-			//listitem.set_data ("favorite-notify-id", notify_id);
-
 			ulong clicked_id = favoriteButton.clicked.connect(() => {
 			  	gif.isFavorite = !gif.isFavorite;
 				updateFavoriteButton(favoriteButton, gif);
 
-
-			//  	warning(
-			//  		"CLICK: " +
-			//  		gif.fileName +
-			//  		" -> " +
-			//  		gif.isFavorite.to_string()
-			//  	);
-
-			//  	updateFavoriteButton(favoriteButton, gif);
-
-			//  	//TODO: Bug has to be fixed
-
-			//  	// Update favorites filter
-			//  	//favoritesfilter.changed(Gtk.FilterChange.DIFFERENT);
-
 			  	gifs.saveModel(model);
 			});
-
-			/*favoriteButton.clicked.connect(() => {
-				gif.isFavorite = !gif.isFavorite;
-				updateFavoriteButton (favoriteButton, gif);
-    			gifs.saveModel (model);
-			});*/
 
 			listitem.set_data("favorite-notify-id", notify_id);
 			listitem.set_data("favorite-clicked-id", clicked_id);
 
 			editButton.clicked.connect(() => {
-				var edit = new Edit(application, this, filepath, filename, filedatetime, gif, gifs);
+				var edit = new Edit(application, this, filepath, filename, filedatetime, gif, gifs, files);
 
 				edit.closed.connect(() => {
 					gifList = gifs.loadGifs();
@@ -651,7 +565,7 @@ public class Window : Gtk.ApplicationWindow {
 					return;
 				}
 
-				files.writeToLog(new datetime.now_local().to_string() + " : gif clicked -> " + filename + "\n");
+				files.writeToLog("GIF clicked -> " + filename + "\n");
 				#if WINDOWS
 					filepath = filepath.replace("/", "\\");
 				#endif
@@ -705,29 +619,34 @@ public class Window : Gtk.ApplicationWindow {
 			picture.set_paintable(null);
 		});
 
-		files.writeToLog(new datetime.now_local().to_string() + " : factory set\n");
+		files.writeToLog("Factory set\n");
 	}
 
 	public void setClipboard(string filename) {
 		#if WINDOWS
 		    int ok = setWindowsClipboardNative(filename);
-			files.writeToLog(new datetime.now_local().to_string() + " : clipboard return code -> " + ok.to_string() + "\n");
+			files.writeToLog("Clipboard return code -> " + ok.to_string() + "\n");
 		#else
-		    var file = File.new_for_path (filename);
-		    string? etag;
-		    Bytes bytes = file.load_bytes (null, out etag);
+			var file = File.new_for_path(filename);
 
-		    var provider = new Gdk.ContentProvider.union ({
-		        new Gdk.ContentProvider.for_bytes("image/gif", bytes),
-		        new Gdk.ContentProvider.for_value(file)
-		    });
+			try {
+				string? etag;
+		    	Bytes bytes = file.load_bytes (null, out etag);
 
-		    var display = Gdk.Display.get_default();
-		    var clipboard = display.get_clipboard();
-		    clipboard.set_content (provider);
+				var provider = new Gdk.ContentProvider.union ({
+					new Gdk.ContentProvider.for_bytes("image/gif", bytes),
+					new Gdk.ContentProvider.for_value(file)
+				});
+
+				var display = Gdk.Display.get_default();
+				var clipboard = display.get_clipboard();
+				clipboard.set_content(provider);
+			} catch (Error e) {
+				files.writeToLog(e.message + "\n");	
+			}
 		#endif
-
-		files.writeToLog(new datetime.now_local().to_string() + " : clipboard set -> " + filename + "\n");
+			
+		files.writeToLog("Clipboard set -> " + filename + "\n");
 	}
 
 	public void setRevealer() {
@@ -751,7 +670,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		label.activate_link.connect((uri) => {
 			if (uri == "openwindow") {
-				var settings = new Settings(application, this);
+				new Settings(application, this, files);
 				revealer.set_reveal_child(false);
 				files.saveSettingsFile("revealer", "false");
 			}
@@ -811,11 +730,11 @@ public class Window : Gtk.ApplicationWindow {
 
 		favoritesfiltered = new Gtk.FilterListModel(model, favoritesfilter);
 
-		var favoritesslice = new Gtk.SliceListModel(
+		/*var favoritesslice = new Gtk.SliceListModel(
 			favoritesfiltered,
 			0,
 			sliceSize
-		);
+		);*/
 
 		favoritesselection = new Gtk.SingleSelection(favoritesfiltered);
 	}
@@ -861,17 +780,16 @@ public class Window : Gtk.ApplicationWindow {
 
 		tagsfiltered = new Gtk.FilterListModel(model, tagsfilter);
 
-		var tagsslice = new Gtk.SliceListModel(
+		/*var tagsslice = new Gtk.SliceListModel(
 			tagsfiltered,
 			0,
 			sliceSize
-		);
+		);*/
 
 		tagsselection = new Gtk.SingleSelection(tagsfiltered);
 	}
 
     public void setModel() {
-		string[] empty = {};
 		model.remove_all();
 
 		foreach (var gif in gifList) {
@@ -897,7 +815,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		selection = new Gtk.SingleSelection(slice);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : model set\n");
+		files.writeToLog("Model set\n");
 	}
 
     public void setWindowContent() {
@@ -941,25 +859,21 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(centerbox);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : window content set\n");
+		files.writeToLog("window content set\n");
 	}
 
     public async void getFolder() {
-		try {
-		    files.setFolder(yield dialog.openFolderDialog(mainwindow));
-			if (files.getFolder() != null) {
-				hasindex = true;
-				files.saveSettingsFile("path", files.getFolder().get_path());
+		files.setFolder(yield dialog.openFolderDialog(mainwindow));
+		if (files.getFolder() != null) {
+			hasindex = true;
+			files.saveSettingsFile("path", files.getFolder().get_path());
 
-				loadingFromFile();
+			loadingFromFile();
 
-				runMonitor();
+			runMonitor();
 
-				refreshState();
-				refreshChecks();
-			}
-		} catch (Error e) {
-		   	files.writeToLog(new datetime.now_local().to_string() + " : (getFolder) " + e.message + "\n");
+			refreshState();
+			refreshChecks();
 		}
 	}
 
@@ -974,7 +888,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : return to first page\n");
+		files.writeToLog("return to first page\n");
 	}
 
 	public void backPage() {
@@ -985,7 +899,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : back page\n");
+		files.writeToLog("back page\n");
 	}
 
 	public void nextPage() {
@@ -996,7 +910,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : next page\n");
+		files.writeToLog("next page\n");
 	}
 
 	public void checkBackButton() {
@@ -1026,12 +940,12 @@ public class Window : Gtk.ApplicationWindow {
 			search.set_search_mode(false);
 			searchbtn.set_active(false);
 
-			files.writeToLog(new datetime.now_local().to_string() + " : search mode inactive\n");
+			files.writeToLog("search mode inactive\n");
 		} else {
 			search.set_search_mode(true);
 			searchbtn.set_active(true);
 
-			files.writeToLog(new datetime.now_local().to_string() + " : search mode active\n");
+			files.writeToLog("search mode active\n");
 		}
 	}
 
@@ -1224,7 +1138,7 @@ public class Window : Gtk.ApplicationWindow {
 	// 		);
 
 	// 	} catch (Error e) {
-	// 		files.writeToLog(new datetime.now_local().to_string() + " : (createSysTrayIcon)" + e.message + "\n");
+	// 		files.writeToLog("(createSysTrayIcon)" + e.message + "\n");
 	// 	}
 	// }
 
@@ -1273,8 +1187,6 @@ public class Window : Gtk.ApplicationWindow {
 
 		filterpopup = new Gtk.Popover();
 		filterpopupbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 1);
-		
-		string content = "";
 
 		var scrolled = new Gtk.ScrolledWindow();
 		scrolled.set_child(filterpopupbox);
@@ -1367,7 +1279,7 @@ public class Window : Gtk.ApplicationWindow {
 		headerbar.pack_end(filterbtn);
 		headerbar.pack_end(refreshbtn);
 
-		files.writeToLog(new datetime.now_local().to_string() + " : menu options created\n");
+		files.writeToLog("menu options created\n");
 	}
 
 	public void refreshChecks() {
@@ -1421,10 +1333,10 @@ public class Window : Gtk.ApplicationWindow {
 				filterpopupbox.set_valign(Gtk.Align.CENTER);
 			}
 
-			files.writeToLog(new datetime.now_local().to_string() + "refreshed popup\n");
+			files.writeToLog("Refreshed popup\n");
 
 		} catch (Error e) {
-			warning(e.message);
+			files.writeToLog(e.message);
 		}		
 	}
 

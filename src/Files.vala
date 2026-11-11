@@ -8,11 +8,12 @@ public class Files {
 
 	private static string configDir = Environment.get_user_config_dir();
 	private static string directory = "gifpicker";
+	private static string logs = "logs";
 	private static string settingsname = "settings.conf";
 	private static string tagsname = "tags.conf";
-	private static string logsname = "gifpicker.log";
+	private static string logsname;
 	private File folder;
-	private File gifFolder;
+	//private File gifFolder;
 
 	private Gifs gifs;
 
@@ -21,11 +22,13 @@ public class Files {
 
 	private FileMonitor monitor;
 
-	public Files() {}
+	public Files() {
+		logsname = datetime.to_string() + ".log";
+	}
 
 	public void checkFolderChanges(File folder, Window window) {
 		if (gifs == null)
-			gifs = new Gifs(window.getConvertedName());
+			gifs = new Gifs(this, window.getConvertedName());
 
 		try {
 			monitor = folder.monitor_directory(
@@ -40,8 +43,6 @@ public class Files {
 						break;
 
 					case FileMonitorEvent.DELETED:
-						Gif gif = new Gif();
-
 						Idle.add(() => {
 							Gif check = null;
 
@@ -75,14 +76,14 @@ public class Files {
 				}
 			});
 		} catch (Error e) {
-			warning("Could not monitor folder: %s", e.message);
+			writeToLog("Could not monitor folder: " + e.message);
 		}
 	}
 
 	private async void addNewGif(File file, Window window) {
 
 		if (!(yield waitForGif(file))) {
-			warning("GIF is not ready or invalid: %s", file.get_path());
+			writeToLog("GIF is not ready or invalid: " + file.get_path());
 			return;
 		}
 
@@ -140,15 +141,15 @@ public class Files {
 
 				if (checks >= 3) {
 					try {
-						var animation = new Gdk.PixbufAnimation.from_file(file.get_path());
+						new Gdk.PixbufAnimation.from_file(file.get_path());
 						return true;
 					} catch (Error e) {
-						warning("File " + file.get_basename() + " not yet decodable");
+						writeToLog("File " + file.get_basename() + " not yet decodable");
 					}
 				}
 
 			} catch (Error e) {
-				warning("File " + file.get_basename() + " not yet available");
+				writeToLog("File " + file.get_basename() + " not yet available");
 			}
 
 			yield waitForTimeout(100);
@@ -164,16 +165,6 @@ public class Files {
 		});
 		yield;
 	}
-
-	public void createThread(Window window, Gif[] newGifList) {
-		new Thread<void*>("worker", () => {
-
-			
-			
-			return null;
-		});
-	}
-
 
 	public bool hasFileContent(string filePath) {
 		try {
@@ -192,18 +183,19 @@ public class Files {
 
 	public void createSettingsDirectory() {
 		string dirPath = Path.build_filename(configDir, directory);
+		string logDirPath = Path.build_filename(configDir, directory, logs);
 
-		File dir = File.new_for_path(dirPath);
+		File dir = File.new_for_path(logDirPath);
 
 		if (!dir.query_exists()) {
 			try {
 				dir.make_directory_with_parents();
-				writeToLog(new datetime.now_local().to_string() + " : created directory -> " + dirPath + "\n");
+				writeToLog("created directory -> " + dirPath + "\n");
 			} catch (Error e) {
-				writeToLog(new datetime.now_local().to_string()+ " " + e.message);
+				writeToLog(new datetime.now_local().to_string() + " " + e.message);
 			}
 		} else
-			writeToLog(new datetime.now_local().to_string() + " : directory already exists -> " + dirPath + "\n");
+			writeToLog("directory already exists -> " + dirPath + "\n");
 	}
 
 	public File checkSettingsFile() {
@@ -218,13 +210,20 @@ public class Files {
 		return file;
 	}
 
+	public File checkLogFile() {
+		string path = Path.build_filename(configDir, directory, logs, logsname);
+
+		File file = File.new_for_path(path);
+		return file;
+	}
+
 	/*public void createFile(string filePath) {
 		File file = checkFile(string fileName)
 		try {
 			FileUtils.set_contents(filePath, "");
-			writeToLog(new datetime.now_local().to_string() + " : created file named " + filePath + "\n");
+			writeToLog("created file named " + filePath + "\n");
 		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : Error creating file: " + e.message);
+			writeToLog("Error creating file: " + e.message);
 		}
 	}*/
 
@@ -233,12 +232,12 @@ public class Files {
 		if (!file.query_exists()) {
 			try {
 				FileUtils.set_contents(file.get_path(), "");
-				writeToLog(new datetime.now_local().to_string() + " : created settings file\n");
+				writeToLog("created settings file\n");
 			} catch (Error e) {
-				writeToLog(new datetime.now_local().to_string() + " : Error creating settings file: " + e.message + "\n");
+				writeToLog("Error creating settings file: " + e.message + "\n");
 			}
 		} else
-			writeToLog(new datetime.now_local().to_string() + " : settings file already exists\n");
+			writeToLog("settings file already exists\n");
 	}
 
 	public void createFile(string fileName) {
@@ -246,12 +245,12 @@ public class Files {
 		if (!file.query_exists()) {
 			try {
 				FileUtils.set_contents(file.get_path(), "");
-				writeToLog(new datetime.now_local().to_string() + " : created " + fileName + "\n");
+				writeToLog("created " + fileName + "\n");
 			} catch (Error e) {
-				writeToLog(new datetime.now_local().to_string() + " : Error creating " + fileName + ": " + e.message + "\n");
+				writeToLog("Error creating " + fileName + ": " + e.message + "\n");
 			}
 		} else
-			writeToLog(new datetime.now_local().to_string() + " : " + fileName + " already exists\n");
+			writeToLog("" + fileName + " already exists\n");
 	}
 
 	public void saveSettingsFile(string key, string text) {
@@ -285,22 +284,27 @@ public class Files {
 
 			FileUtils.set_contents(file.get_path(), newcontent);
 		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			writeToLog("" + e.message + "\n");
 		}
 	}
 
-	public void saveTagsFile(string text) {
+	public bool saveTagsFile(string text) {
 		File file = checkFile("tags.conf");
-		string content = "";
+		string filecontent = "";
 
 		try {
 			if (file.query_exists())
-				FileUtils.get_contents(file.get_path(), out content);
+				FileUtils.get_contents(file.get_path(), out filecontent);
 
-			FileUtils.set_contents(file.get_path(), text);
+			if (filecontent != text) {
+				FileUtils.set_contents(file.get_path(), text);
+				return true;
+			}
 		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			writeToLog("" + e.message + "\n");
 		}
+
+		return false;
 	}
 
 	public async string[] createFileIndex(string folderPath) {
@@ -309,6 +313,7 @@ public class Files {
 		string[] filePaths = null;
 
 		try {
+			int num = 0;
 			var e = yield file.enumerate_children_async(FileAttribute.STANDARD_NAME, 0, Priority.DEFAULT);
 			while (true) {
 		        var files = yield e.next_files_async (10, Priority.DEFAULT);
@@ -318,38 +323,40 @@ public class Files {
 
 		        foreach (var info in files) {
 					if (info.get_name().contains(".gif")) {
+						num++;
 		           		filePaths += folderPath + "/" + info.get_name();
-						writeToLog(new datetime.now_local().to_string() + " : added to index -> " + info.get_name() + "\n");
+
 		            }
 				}
 		    }
+
+			writeToLog("GIFs added to index -> " + num.to_string() + " item(s)\n");
+
+
         	yield e.close_async();
 		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			writeToLog("" + e.message + "\n");
 		}
 
 		return filePaths;
-	}
-
-	
-	public File checkLogFile() {
-		File file = checkFile(logsname);
-		return file;
 	}
 
 	public void writeToLog(string content) {
 		File file = checkLogFile();
 		FileOutputStream stream;
 
-		if (file.query_exists(null)) {
-			stream = file.append_to(FileCreateFlags.NONE, null);
-		} else {
-			stream = file.create(FileCreateFlags.NONE, null);
-		}
+		try {
+			if (file.query_exists(null))
+				stream = file.append_to(FileCreateFlags.NONE, null);
+			else
+				stream = file.create(FileCreateFlags.NONE, null);
 
-		var data = new DataOutputStream(stream);
-		data.put_string(content);
-		data.close();
+			var data = new DataOutputStream(stream);
+			data.put_string(new datetime.now_local().to_string() + " : " + content);
+			data.close();
+		} catch (Error e) {
+			warning(e.message);
+		}	
 	}
 
 	//getters / setters
@@ -368,7 +375,7 @@ public class Files {
 			var file = File.new_for_path (path);
 			file.create(FileCreateFlags.NONE);
 		} catch (Error e) {
-			warning (e.message);
+			writeToLog(e.message);
 		}
 
 		return File.new_for_path(path);
@@ -383,12 +390,12 @@ public class Files {
 
 				foreach (string line in content.split("\n")) {
 					if (line.has_prefix(key + "=")) {
-						writeToLog(new datetime.now_local().to_string() + " : setting retrieved: " + key + " - " + line.substring((key + "=").length) + "\n");
+						writeToLog("Setting retrieved: " + key + " -> " + line.substring((key + "=").length) + "\n");
 						return line.substring((key + "=").length);
 					}
 				}
 			} catch (Error e) {
-				writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+				writeToLog("" + e.message + "\n");
 			}
 		}
 
@@ -407,7 +414,7 @@ public class Files {
 				current++;
 
 		} catch (Error e) {
-			writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			writeToLog("" + e.message + "\n");
 		}
 
 		return current;

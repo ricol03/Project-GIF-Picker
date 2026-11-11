@@ -7,7 +7,7 @@ using Gdk;
 
 public class Application : Gtk.Application {
 	private Files files = new Files();
-	private About about = new About();
+	private About about;
 	private string[] filePaths = null;
  	private Window window = null;
 
@@ -15,8 +15,8 @@ public class Application : Gtk.Application {
 	const string PORTAL_PATH = "/org/freedesktop/portal/desktop";
 	const string GLOBAL_SHORTCUTS_IFACE = "org.freedesktop.portal.GlobalShortcuts";
 
-	private DBusConnection? bus;
-	private string? session_handle;
+	/*private DBusConnection? bus;
+	private string? session_handle;*/
 
     public Application() {
 		Object (
@@ -47,7 +47,10 @@ public class Application : Gtk.Application {
 		add_action(settings_action);
 		set_accels_for_action("app.settings", new string[] {"<Control>t"});
 		settings_action.activate.connect(() => {
-			var settings = new Settings(this, window);
+			var settings = new Settings(this, window, files);
+
+			stdout.printf("Same instance after construction: %s\n",
+    files == settings.getFiles() ? "yes" : "no");	
 		});
 
 		var refresh_action = new SimpleAction("refresh", null);
@@ -56,12 +59,8 @@ public class Application : Gtk.Application {
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
 		refresh_action.activate.connect(() => {
 			files.createFileIndex.begin(files.getFolder().get_path(), (obj, res) => {
-				try {
-					filePaths = files.createFileIndex.end(res);
-					window.setGifList();
-				} catch (Error e) {
-					warning(e.message);
-				}
+				filePaths = files.createFileIndex.end(res);
+				window.setGifList();
 			});
 		});
 
@@ -122,13 +121,12 @@ public class Application : Gtk.Application {
     }
 
     protected override void activate() {
+		about = new About(files);
+
 		base.activate();
 
+		files.writeToLog("started app\n");
 		files.setFolder(File.new_for_path(files.getSetting("path")));
-
-		files.writeToLog("////////////////////////// started run \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ \n");
-		var datetime = new GLib.DateTime.now_local();
-		files.writeToLog(new datetime.now_local().to_string() + " : started app\n");
 
 		files.createSettingsDirectory();
 		files.createSettingsFile();

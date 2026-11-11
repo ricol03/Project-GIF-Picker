@@ -6,13 +6,15 @@
 public class Edit : Object {
     public signal void closed();
 
-    private GLib.DateTime datetime = new GLib.DateTime.now_local();
+    //private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
 	private Gtk.ApplicationWindow mainwindow;
-    private Files files = new Files();
-
+    private Files files;
+    
     public Edit(Gtk.Application app, Window window, 
-        string filepath, string filename, string? datetime, Gif gif, Gifs gifs) {
+        string filepath, string filename, string? datetime, Gif gif, Gifs gifs, Files files) {
+
+        this.files = files;
 
         Gtk.Box box = new Gtk.Box(Gtk.Orientation.VERTICAL, 2) {
 			margin_top = 20,
@@ -110,7 +112,7 @@ public class Edit : Object {
                 } 
             }
         } catch (Error e) {
-            warning (e.message);
+            files.writeToLog(e.message);
         }
 
         tagsbutton.popover = tagsswitch;
@@ -136,7 +138,6 @@ public class Edit : Object {
                 if (child is Gtk.CheckButton) {
                     if (((Gtk.CheckButton) child).active) {
                         tags += child.label;
-                        warning(child.label);
                     }    
                 }
 
@@ -176,7 +177,6 @@ public class Edit : Object {
                 if (child is Gtk.CheckButton) {
                     if (((Gtk.CheckButton) child).active) {
                         tags += child.label;
-                        warning(child.label);
                     }    
                 }
 
@@ -247,11 +247,11 @@ public class Edit : Object {
 			parser.load_from_file(gifs.getFilePath());
 
 			var node = parser.get_root();
-			var files = node.get_array();
+			var otherfiles = node.get_array();
 
 			// Find the object matching the filename
-			for (uint i = 0; i < files.get_length(); i++) {
-				var item = files.get_object_element(i);
+			for (uint i = 0; i < otherfiles.get_length(); i++) {
+				var item = otherfiles.get_object_element(i);
 
 				if (item.has_member("filePath") &&
 					item.get_string_member("filePath") == gifPath) {
@@ -277,11 +277,11 @@ public class Edit : Object {
 				}
 
 			} else {
-				warning("File not found in JSON: %s\n", gifPath);
+				files.writeToLog("File not found in JSON: " + gifPath);
 			}
 
 		} catch (Error e) {
-			warning("Failed to update JSON: %s\n", e.message);
+			files.writeToLog("Failed to update JSON: " + e.message);
 		}
 
         return null;

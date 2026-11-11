@@ -5,13 +5,13 @@
 
 public class About {
 	private Gtk.AboutDialog about;
+	private Files files;
 
-	private Logs logs = new Logs();
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+	private string version = "0.3.1-dev";
 
-	private string version = "0.3";
-
-	public About() {}
+	public About(Files files) {
+		this.files = files;
+	}
 
 	public void createWindow(Gtk.ApplicationWindow window) {
 		about = new Gtk.AboutDialog();
@@ -21,16 +21,11 @@ public class About {
 		about.set_program_name("GIF Picker");
 		about.set_version(version);
 
-		try {
-			var texture = Gdk.Texture.from_resource(
-				"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/gifpicker.png"
-			);
+		var texture = Gdk.Texture.from_resource(
+			"/io/ricol03/gifpicker/icons/icons/hicolor/scalable/actions/gifpicker.png"
+		);
 
-			about.set_logo(texture);
-
-		} catch (Error e) {
-			warning(e.message);
-		}
+		about.set_logo(texture);
 
 		about.set_comments("Easily accessible GIF picker for your local library");
 		about.set_website("https://github.com/ricol03/Project-GIF-Picker");
@@ -44,6 +39,6 @@ public class About {
 
 		about.present();
 
-		logs.writeToLog(new datetime.now_local().to_string() + " : about window created\n");
+		files.writeToLog("About window created\n");
 	}
 }

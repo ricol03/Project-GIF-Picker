@@ -4,23 +4,28 @@
  ****/
 
 public class Settings {
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+	//private GLib.DateTime datetime = new GLib.DateTime.now_local();
 
-	private Files files = new Files();
-	private Dialogs dialogs = new Dialogs();
+	private Files files;
+	private Dialogs dialogs;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "Settings";
 	private bool clickedbutton = false;
+	private bool changedpath = false;
+	private bool changedtags = false;
 
-	private Gtk.Button pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+	//private Gtk.Button pathbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
 	private Gtk.Entry pathentry = new Gtk.Entry();
 	private Gtk.DropDown closeswitch;
 
 	private Gtk.Button editbutton;
 	private Gtk.Label tagsinfo;
 
-	public Settings(Gtk.Application app, Window window) {
-		files.writeToLog(new datetime.now_local().to_string() + " : opened settings\n");
+	public Settings(Gtk.Application app, Window window, Files files) {
+		this.files = files;
+		dialogs = new Dialogs(files);
+
+		files.writeToLog("Opened settings\n");
 
 		Gtk.Box topbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 10) {
 			margin_top = 15,
@@ -79,7 +84,7 @@ public class Settings {
 
 		addbutton.clicked.connect(() => {
 			tagsbox.remove(tagsinfo);
-			tagsbox.append(addTag(tagsbox, null));
+			tagsbox.prepend(addTag(tagsbox, null));
 
 			editbutton.clicked();
 		});
@@ -111,7 +116,7 @@ public class Settings {
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
-			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via close button\n");
+			files.writeToLog("Closed settings via Cancel button\n");
 			mainwindow.destroy();
 		});
 
@@ -130,12 +135,13 @@ public class Settings {
 		okbutton.clicked.connect(() => {
 			applyChanges(tagsbox);
 
-			if (clickedbutton) {
+			if (changedpath)
 				window.refreshState();
+			
+			if (changedtags)
 				window.refreshChecks();
-			}
-				
-			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
+			
+			files.writeToLog("Closed settings via OK button\n");
 			mainwindow.destroy();
 		});
 
@@ -153,9 +159,9 @@ public class Settings {
 
 		box.append(topbox);
 
-		var spacer = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		var spacer = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 		spacer.vexpand = true;
-		box.append (spacer);
+		box.append(spacer);
 
 		box.append(buttonsbox);
 
@@ -171,24 +177,25 @@ public class Settings {
 		
 		mainwindow.present();
 
-		mainwindow.close_request.connect(() => {
-			if (clickedbutton) {
-				window.refreshState();
-				window.refreshChecks();
-			}
-				
-			files.writeToLog(new datetime.now_local().to_string() + " : closed settings via titlebar close button\n");
+		mainwindow.close_request.connect(() => {	
+			files.writeToLog("Closed settings via titlebar close button\n");
 			mainwindow.destroy();
 			return true;
 		});
 	}
 
 	private void applyChanges(Gtk.Box tagsbox) {
-		files.writeToLog(new datetime.now_local().to_string() + " : applied settings\n");
+		files.writeToLog("Applied settings\n");
 
-		files.saveSettingsFile("path", pathentry.get_text());
+		if (files.getSetting("path") != pathentry.get_text()) {
+			files.saveSettingsFile("path", pathentry.get_text());
+			changedpath = true;
+		}
+
 		files.saveSettingsFile("revealer", "false");
-		files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
+
+		if (files.getSetting("labels") != closeswitch.get_selected().to_string())
+			files.saveSettingsFile("labels", closeswitch.get_selected().to_string());
 
 		var content = "";
 
@@ -216,9 +223,8 @@ public class Settings {
 			child = next;
 		}
 
-		files.saveTagsFile(content);
-
-		clickedbutton = true;
+		if (files.saveTagsFile(content))
+			changedtags = true;
 	}
 
 	private void createGeneralSection(Window window, Gtk.Frame generalframe, Gtk.Box generalbox) {
@@ -253,14 +259,10 @@ public class Settings {
 		File? newfile = null;
 		pathbutton.clicked.connect(() => {
 			dialogs.openFolderDialog.begin(window, (obj, res) => {
-				try {
-					newfile = dialogs.openFolderDialog.end(res);
-					if (newfile != null) {
-						pathentry.set_text(newfile.get_path());
-						files.writeToLog(new datetime.now_local().to_string() + " : new path -> " + newfile.get_path() + "\n");
-					}
-				} catch (Error e) {
-					files.writeToLog(new datetime.now_local().to_string() + " : (settings) " + e.message + "\n");
+				newfile = dialogs.openFolderDialog.end(res);
+				if (newfile != null) {
+					pathentry.set_text(newfile.get_path());
+					files.writeToLog("new path -> " + newfile.get_path() + "\n");
 				}
 			});
 		});
@@ -304,12 +306,12 @@ public class Settings {
 				addTagsSectionMessage(tagsbox);
 			} else {
 				foreach (string line in content.split("\n")) {
-					tagsbox.append(addTag(tagsbox, line));
+					tagsbox.prepend(addTag(tagsbox, line));
 				}
 			}
 
 		} catch (Error e) {
-			files.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			files.writeToLog("" + e.message + "\n");
 		}
 
 		tagsframe.set_child(tagsbox);
@@ -411,7 +413,6 @@ public class Settings {
 				editbutton.set_tooltip_markup("Edit tag name");
 				deletebutton.set_tooltip_markup("Delete tag");
 
-
 				#if WINDOWS
 					deletebutton.set_child(deleteicon);
 					editbutton.set_child(editicon);
@@ -487,5 +488,9 @@ public class Settings {
 		row.append(deletebutton);
 
 		return row;
+	}
+
+	public Files getFiles() {
+		return files;
 	}
 }

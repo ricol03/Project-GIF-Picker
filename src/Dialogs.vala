@@ -4,10 +4,11 @@
  ****/
 
 public class Dialogs {
-	private Logs logs = new Logs();
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+	private Files files;
 
-	public Dialogs() {}
+	public Dialogs(Files files) {
+		this.files = files;
+	}
     
     public async File openFolderDialog(Gtk.ApplicationWindow mainwindow) {
     	var dialog = new Gtk.FileDialog();
@@ -16,10 +17,10 @@ public class Dialogs {
 
 		try {
 			file = yield dialog.select_folder(mainwindow, null);
-			logs.writeToLog(new datetime.now_local().to_string() + " : folder selected -> " + file.get_path() + "\n");
+			files.writeToLog("Folder selected -> " + file.get_path() + "\n");
 			return file;
 		} catch (Error e) {
-			logs.writeToLog(new datetime.now_local().to_string() + " : " + e.message + "\n");
+			files.writeToLog(e.message + "\n");
 		}
 	
 		return file;

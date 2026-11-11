@@ -4,15 +4,17 @@
  ****/
 
 public class Gifs {
-	private Files files = new Files();
-	private GLib.DateTime datetime = new GLib.DateTime.now_local();
+	//private GLib.DateTime datetime = new GLib.DateTime.now_local();
+
+	private Files files;
 
 	private string configDir = Environment.get_user_config_dir();
 	private string directory = "gifpicker";
 	private string filename = "index";
 	private string filePath;
 
-	public Gifs(string? dirName) {
+	public Gifs(Files files, string? dirName) {
+		this.files = files;
 		createDirs(dirName);
 	}
 
@@ -51,7 +53,7 @@ public class Gifs {
 				continue;
 			}
 
-			files.writeToLog("Saving GIF: " + gif.fileName + "\n");
+			//files.writeToLog("Saving GIF: " + gif.fileName + "\n");
 			builder.add_value(gif.saveJson());
 		}
 
@@ -73,13 +75,13 @@ public class Gifs {
 
 
 	public Gif[] loadGifs() {
-		files.writeToLog(new datetime.now_local().to_string() + " : loading gifs from file\n");
+		files.writeToLog("Loading gifs from file\n");
 		var parser = new Json.Parser();
 
 		try {
 			parser.load_from_file(filePath);
 		} catch (Error e) {
-			files.writeToLog(new datetime.now_local().to_string() + " : Failed to parse JSON file -> " + e.message + "\n");
+			files.writeToLog("Failed to parse JSON file -> " + e.message + "\n");
 		}
 
 		var root = parser.get_root();

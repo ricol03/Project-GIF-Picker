@@ -20,7 +20,6 @@ project_gif_picker_sources = [
     'src' / 'Gifs.vala',
     'src' / 'GifState.vala',
     #'src' / 'GlobalShortcut.vala',
-    'src' / 'Logs.vala',
     'src' / 'Main.vala',
     #'src' / 'Tray.vala',
     'src' / 'Settings.vala',

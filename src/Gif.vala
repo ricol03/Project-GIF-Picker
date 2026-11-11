@@ -10,7 +10,6 @@ public class Gif : Object {
 	public bool isFavorite { get; set; default = false; }
 	public string dateTime { get; set; }
 	public string[] tags { get; set; }
-	private Files files = new Files();
 
 	public Gif() {}
 
