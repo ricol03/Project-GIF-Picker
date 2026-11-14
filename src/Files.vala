@@ -190,12 +190,12 @@ public class Files {
 		if (!dir.query_exists()) {
 			try {
 				dir.make_directory_with_parents();
-				writeToLog("created directory -> " + dirPath + "\n");
+				writeToLog("Created directory -> " + dirPath + "\n");
 			} catch (Error e) {
 				writeToLog(new datetime.now_local().to_string() + " " + e.message);
 			}
 		} else
-			writeToLog("directory already exists -> " + dirPath + "\n");
+			writeToLog("Directory already exists -> " + dirPath + "\n");
 	}
 
 	public File checkSettingsFile() {
@@ -232,12 +232,12 @@ public class Files {
 		if (!file.query_exists()) {
 			try {
 				FileUtils.set_contents(file.get_path(), "");
-				writeToLog("created settings file\n");
+				writeToLog("Created settings file\n");
 			} catch (Error e) {
 				writeToLog("Error creating settings file: " + e.message + "\n");
 			}
 		} else
-			writeToLog("settings file already exists\n");
+			writeToLog("Settings file already exists\n");
 	}
 
 	public void createFile(string fileName) {
@@ -245,12 +245,12 @@ public class Files {
 		if (!file.query_exists()) {
 			try {
 				FileUtils.set_contents(file.get_path(), "");
-				writeToLog("created " + fileName + "\n");
+				writeToLog("Created \"" + fileName + "\"\n");
 			} catch (Error e) {
-				writeToLog("Error creating " + fileName + ": " + e.message + "\n");
+				writeToLog("Error creating \"" + fileName + "\": " + e.message + "\n");
 			}
 		} else
-			writeToLog("" + fileName + " already exists\n");
+			writeToLog("File \"" + fileName + "\" already exists\n");
 	}
 
 	public void saveSettingsFile(string key, string text) {

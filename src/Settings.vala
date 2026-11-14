@@ -10,7 +10,6 @@ public class Settings {
 	private Dialogs dialogs;
 	private Gtk.ApplicationWindow mainwindow;
 	private string windowtitle = "Settings";
-	private bool clickedbutton = false;
 	private bool changedpath = false;
 	private bool changedtags = false;
 
@@ -18,7 +17,6 @@ public class Settings {
 	private Gtk.Entry pathentry = new Gtk.Entry();
 	private Gtk.DropDown closeswitch;
 
-	private Gtk.Button editbutton;
 	private Gtk.Label tagsinfo;
 
 	public Settings(Gtk.Application app, Window window, Files files) {
@@ -68,7 +66,7 @@ public class Settings {
 			addbutton = new Gtk.Button();
 			addbutton.set_child(addicon);
 		#else
-			addbutton = new Gtk.Button.from_icon_name("folder-open-symbolic");
+			addbutton = new Gtk.Button.from_icon_name("list-add-symbolic");
 		#endif
 		addbutton.add_css_class("linked");
 		addbutton.set_tooltip_markup("Add new tag");
@@ -83,17 +81,34 @@ public class Settings {
 		};
 
 		addbutton.clicked.connect(() => {
-			tagsbox.remove(tagsinfo);
-			tagsbox.prepend(addTag(tagsbox, null));
+			if (tagsbox.get_first_child() != null)
+				tagsbox.remove(tagsinfo);
 
-			editbutton.clicked();
+			var newTag = addTag(tagsbox, null);
+
+			tagsbox.prepend(newTag);
+
+			Gtk.Widget? child = newTag.get_first_child();
+
+			while (child != null) {
+				if (child is Gtk.Button) {
+					var button = (Gtk.Button)child;
+					button.clicked();
+
+					break;
+				}
+
+				child = child.get_next_sibling();
+			}
+
+			files.writeToLog("Added new tag\n");
 		});
 
 		var scrolled = new Gtk.ScrolledWindow();
 		scrolled.set_child(tagsframe);
 		scrolled.set_max_content_height(300);
 		scrolled.set_propagate_natural_height(true);
-		scrolled.set_policy (
+		scrolled.set_policy(
 			Gtk.PolicyType.NEVER,
 			Gtk.PolicyType.AUTOMATIC
 		);
@@ -116,7 +131,7 @@ public class Settings {
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
-			files.writeToLog("Closed settings via Cancel button\n");
+			files.writeToLog("Closed settings window via Cancel button\n");
 			mainwindow.destroy();
 		});
 
@@ -141,7 +156,7 @@ public class Settings {
 			if (changedtags)
 				window.refreshChecks();
 			
-			files.writeToLog("Closed settings via OK button\n");
+			files.writeToLog("Closed settings window via OK button\n");
 			mainwindow.destroy();
 		});
 
@@ -178,15 +193,13 @@ public class Settings {
 		mainwindow.present();
 
 		mainwindow.close_request.connect(() => {	
-			files.writeToLog("Closed settings via titlebar close button\n");
+			files.writeToLog("Closed settings window via titlebar close button\n");
 			mainwindow.destroy();
 			return true;
 		});
 	}
 
 	private void applyChanges(Gtk.Box tagsbox) {
-		files.writeToLog("Applied settings\n");
-
 		if (files.getSetting("path") != pathentry.get_text()) {
 			files.saveSettingsFile("path", pathentry.get_text());
 			changedpath = true;
@@ -225,6 +238,8 @@ public class Settings {
 
 		if (files.saveTagsFile(content))
 			changedtags = true;
+
+		files.writeToLog("Applied settings\n");
 	}
 
 	private void createGeneralSection(Window window, Gtk.Frame generalframe, Gtk.Box generalbox) {
@@ -262,7 +277,7 @@ public class Settings {
 				newfile = dialogs.openFolderDialog.end(res);
 				if (newfile != null) {
 					pathentry.set_text(newfile.get_path());
-					files.writeToLog("new path -> " + newfile.get_path() + "\n");
+					files.writeToLog("New path -> " + newfile.get_path() + "\n");
 				}
 			});
 		});
@@ -311,7 +326,7 @@ public class Settings {
 			}
 
 		} catch (Error e) {
-			files.writeToLog("" + e.message + "\n");
+			files.writeToLog( e.message + "\n");
 		}
 
 		tagsframe.set_child(tagsbox);
@@ -379,6 +394,8 @@ public class Settings {
 		deletebutton.set_data<string> ("action", "delete");
 		deletebutton.add_css_class("linked");
 		deletebutton.set_tooltip_markup("Delete tag");
+
+		Gtk.Button editbutton;
 
 		#if WINDOWS
 			var editicon = new Gtk.Image.from_resource(
@@ -448,7 +465,7 @@ public class Settings {
 					deletebutton.set_child(cancelicon);
 					editbutton.set_child(checkmarkicon);
 				#else
-					deletebutton.set_icon_name("cancel-symbolic");
+					deletebutton.set_icon_name("dialog-cancel-symbolic");
 					editbutton.set_icon_name("checkmark-symbolic");
 				#endif
 			} else {

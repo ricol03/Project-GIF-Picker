@@ -5,11 +5,11 @@ This GTK app pretends to be a small but effective tool to have a local GIF libra
 
 ## Screenshots
 
-### Fedora Linux on GNOME 50 
+### Fedora Linux on KDE Plasma 6.8 
 ![Main window and about box](doc/ss-1.png)
 
 ### Windows 10
-![Main window and winver](doc/ss-2.png)
+![Main window and about box](doc/ss-2.png)
 
 ## Building
 Generically, the process uses Ninja, Meson and valac, so make sure to have these installed. As for the commands themselves, make sure to have the necessary dependencies installed and build the Meson project as normal.

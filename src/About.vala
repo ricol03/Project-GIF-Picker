@@ -7,7 +7,7 @@ public class About {
 	private Gtk.AboutDialog about;
 	private Files files;
 
-	private string version = "0.3.1-dev";
+	private string version = "0.3.1";
 
 	public About(Files files) {
 		this.files = files;
@@ -39,6 +39,6 @@ public class About {
 
 		about.present();
 
-		files.writeToLog("About window created\n");
+		files.writeToLog("Opened About window\n");
 	}
 }

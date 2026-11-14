@@ -148,6 +148,8 @@ public class Edit : Object {
             gif.updateData(tags, gif.fileName, gifs.getFilePath());
             gif.tags = tags;
 
+            files.writeToLog("Closed edit window via OK button\n");
+
 			mainwindow.destroy();
 		});
 
@@ -156,6 +158,7 @@ public class Edit : Object {
 		cancelbutton.set_label("Cancel");
 
 		cancelbutton.clicked.connect(() => {
+            files.writeToLog("Closed edit window via Cancel button\n");
 			mainwindow.destroy();
 		});
 
@@ -186,6 +189,7 @@ public class Edit : Object {
 
             gif.updateData(tags, gif.fileName, gifs.getFilePath());
 
+            files.writeToLog("Applied edits\n");
 		});
 
         buttonsbox.append(okbutton);
@@ -215,6 +219,7 @@ public class Edit : Object {
 		mainwindow.set_modal(true);
 
         mainwindow.close_request.connect(() => {
+            files.writeToLog("Closed edit window via titlebar close button\n");
             closed();
             return false; // allow the window to close
         });

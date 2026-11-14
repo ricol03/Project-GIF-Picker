@@ -47,10 +47,7 @@ public class Application : Gtk.Application {
 		add_action(settings_action);
 		set_accels_for_action("app.settings", new string[] {"<Control>t"});
 		settings_action.activate.connect(() => {
-			var settings = new Settings(this, window, files);
-
-			stdout.printf("Same instance after construction: %s\n",
-    files == settings.getFiles() ? "yes" : "no");	
+			new Settings(this, window, files);
 		});
 
 		var refresh_action = new SimpleAction("refresh", null);
@@ -58,10 +55,12 @@ public class Application : Gtk.Application {
 		add_action(refresh_action);
 		set_accels_for_action("app.refresh", new string[] {"<Control>r"});
 		refresh_action.activate.connect(() => {
+			files.writeToLog("Refreshing GIF list\n");
 			files.createFileIndex.begin(files.getFolder().get_path(), (obj, res) => {
 				filePaths = files.createFileIndex.end(res);
 				window.setGifList();
 			});
+			files.writeToLog("Refreshed GIF list\n");
 		});
 
 		var back_action = new SimpleAction("back", null);
@@ -125,11 +124,11 @@ public class Application : Gtk.Application {
 
 		base.activate();
 
-		files.writeToLog("started app\n");
+		files.writeToLog("Started app\n");
 		files.setFolder(File.new_for_path(files.getSetting("path")));
 
 		files.createSettingsDirectory();
-		files.createSettingsFile();
+		files.createFile("settings.conf");
 		files.createFile("tags.conf");
 
 		window = new Window(this, files);

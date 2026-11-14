@@ -243,15 +243,14 @@ public class Window : Gtk.ApplicationWindow {
     }
 
 	public void runMonitor() {
-		
-		string? path = files.getSetting ("path");
+		string? path = files.getSetting("path");
 
 		if (path == null || path.strip () == "") {
-			files.writeToLog ("No folder path is set");
+			files.writeToLog("No folder path is set\n");
 			return;
 		}
 
-		File monitorFolder = File.new_for_path (path);
+		File monitorFolder = File.new_for_path(path);
 		
 		files.checkFolderChanges(monitorFolder, this);
 	}
@@ -548,6 +547,7 @@ public class Window : Gtk.ApplicationWindow {
 			listitem.set_data("favorite-clicked-id", clicked_id);
 
 			editButton.clicked.connect(() => {
+				files.writeToLog("Edit dialog for \"" + filename + "\" opened");
 				var edit = new Edit(application, this, filepath, filename, filedatetime, gif, gifs, files);
 
 				edit.closed.connect(() => {
@@ -834,7 +834,7 @@ public class Window : Gtk.ApplicationWindow {
 		centerbox.set_vexpand(true);
 
 		var contentbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 3);
-		var image = new Gtk.Image.from_icon_name("close");
+		var image = new Gtk.Image.from_icon_name("dialog-warning-symbolic");
 		image.set_icon_size(2);
 		var text = new Gtk.Label("GIF list not available. Please select a location.");
 
@@ -859,7 +859,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		mainbox.append(centerbox);
 
-		files.writeToLog("window content set\n");
+		files.writeToLog("Window content set\n");
 	}
 
     public async void getFolder() {
@@ -888,7 +888,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog("return to first page\n");
+		files.writeToLog("Return to first page\n");
 	}
 
 	public void backPage() {
@@ -899,7 +899,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog("back page\n");
+		files.writeToLog("Back page\n");
 	}
 
 	public void nextPage() {
@@ -910,7 +910,7 @@ public class Window : Gtk.ApplicationWindow {
 		checkBackButton();
 		checkNextButton((int)totalitems);
 
-		files.writeToLog("next page\n");
+		files.writeToLog("Next page\n");
 	}
 
 	public void checkBackButton() {
@@ -940,12 +940,12 @@ public class Window : Gtk.ApplicationWindow {
 			search.set_search_mode(false);
 			searchbtn.set_active(false);
 
-			files.writeToLog("search mode inactive\n");
+			files.writeToLog("Search mode deactivated\n");
 		} else {
 			search.set_search_mode(true);
 			searchbtn.set_active(true);
 
-			files.writeToLog("search mode active\n");
+			files.writeToLog("Search mode actived\n");
 		}
 	}
 
@@ -1009,6 +1009,8 @@ public class Window : Gtk.ApplicationWindow {
 		    refreshbtn.set_sensitive(true);
 			filterbtn.set_sensitive(true);
 		    menubtn.set_sensitive(true);
+
+			files.writeToLog("Favourites list deactivated\n");
 		} else {
 		    stack.set_visible_child_name("panel");
 
@@ -1024,6 +1026,8 @@ public class Window : Gtk.ApplicationWindow {
 		    menubtn.set_sensitive(false);
 
 		    refreshFavoritePanel();
+
+			files.writeToLog("Favourites list activated\n");
 		}
 	}
 
@@ -1165,7 +1169,7 @@ public class Window : Gtk.ApplicationWindow {
 			refreshbtn.set_child(refreshicon);
 		#else
 			refreshbtn = new Gtk.Button() {
-				icon_name = "reload-symbolic",
+				icon_name = "view-refresh-symbolic",
 			};
 		#endif
 		refreshbtn.set_tooltip_markup("Refresh <span alpha='70%'>(Ctrl+R)</span>");
@@ -1230,7 +1234,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		#else
 			backbtn = new Gtk.Button() {
-				icon_name = "back-symbolic",
+				icon_name = "go-previous-symbolic",
 			};
 		#endif
 		backbtn.set_tooltip_markup("Back <span alpha='70%'>(Alt+B)</span>");
@@ -1246,7 +1250,7 @@ public class Window : Gtk.ApplicationWindow {
 
 		#else
 			nextbtn = new Gtk.Button() {
-				icon_name = "next-symbolic",
+				icon_name = "go-next-symbolic",
 			};
 		#endif
 		nextbtn.set_tooltip_markup("Next <span alpha='70%'>(Alt+N)</span>");
@@ -1279,7 +1283,7 @@ public class Window : Gtk.ApplicationWindow {
 		headerbar.pack_end(filterbtn);
 		headerbar.pack_end(refreshbtn);
 
-		files.writeToLog("menu options created\n");
+		files.writeToLog("Menu options created\n");
 	}
 
 	public void refreshChecks() {
