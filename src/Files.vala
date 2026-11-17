@@ -23,7 +23,8 @@ public class Files {
 	private FileMonitor monitor;
 
 	public Files() {
-		logsname = datetime.to_string() + ".log";
+		var finaldate = datetime.to_string().replace(":", "_");
+		logsname = finaldate.to_string() + ".log";	
 	}
 
 	public void checkFolderChanges(File folder, Window window) {
