@@ -7,7 +7,7 @@ public class About {
 	private Gtk.AboutDialog about;
 	private Files files;
 
-	private string version = "0.3.1";
+	private string version = "0.4-dev";
 
 	public About(Files files) {
 		this.files = files;

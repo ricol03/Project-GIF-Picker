@@ -30,9 +30,11 @@ public class Edit : Object {
         box.append(makeRow("Filename", filenameentry));
 
         var friendlynameentry = new Gtk.Entry();
-        friendlynameentry.set_placeholder_text("(not implemented)");
-        //friendlynameentry.set_placeholder_text("e.g. Cool GIF");
-        friendlynameentry.set_sensitive(false);
+
+        if (gif.displayName != "")
+            friendlynameentry.set_placeholder_text(gif.displayName);
+        else
+            friendlynameentry.set_placeholder_text("e.g. Cool GIF");
 
         box.append(makeRow("Display name", friendlynameentry));
 
@@ -145,7 +147,7 @@ public class Edit : Object {
                 iterator = (Gtk.Widget)child;
             }
 
-            gif.updateData(tags, gif.fileName, gifs.getFilePath());
+            gif.updateData(tags, gif.fileName, friendlynameentry.get_text(), gifs.getFilePath());
             gif.tags = tags;
 
             files.writeToLog("Closed edit window via OK button\n");
@@ -187,7 +189,7 @@ public class Edit : Object {
                 iterator = (Gtk.Widget)child;
             }
 
-            gif.updateData(tags, gif.fileName, gifs.getFilePath());
+            gif.updateData(tags, gif.fileName, friendlynameentry.get_text(), gifs.getFilePath());
 
             files.writeToLog("Applied edits\n");
 		});

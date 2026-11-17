@@ -155,7 +155,7 @@ public class Settings {
 			
 			if (changedtags)
 				window.refreshChecks();
-			
+				
 			files.writeToLog("Closed settings window via OK button\n");
 			mainwindow.destroy();
 		});
@@ -287,7 +287,7 @@ public class Settings {
 
 		var pathentryrow = makeRow("Path for GIF library", combobox);
 
-		string[] options = {"Complete name", "Complete name w/o extension"};
+		string[] options = {"Complete name", "Complete name w/o extension", "Display name"};
 
 		closeswitch = new Gtk.DropDown.from_strings(options);
 

@@ -101,7 +101,7 @@ public class Gif : Object {
 	}
 
 	// updates the gif data
-	public void updateData(string[] newtags, string gifname, string filePath) {
+	public void updateData(string[] newtags, string gifname, string displayname, string filePath) {
 		try {
 			Json.Object? targetObject = null;
 
@@ -142,6 +142,12 @@ public class Gif : Object {
 				}
 
 				targetObject.set_array_member("tags", newTags);
+
+				/*if (displayname == null)
+					targetObject.set_string_member("displayName", fileName);
+				else
+					if (targetObject.get_string_member("displayName") != displayname)
+						targetObject.set_string_member("displayName", displayname);*/
 
 				// Write the updated JSON array back to the file
 				var generator = new Json.Generator();

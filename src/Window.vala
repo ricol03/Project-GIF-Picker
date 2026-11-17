@@ -420,8 +420,6 @@ public class Window : Gtk.ApplicationWindow {
     public void setFactory() {
 		factory = new Gtk.SignalListItemFactory();
 
-		string labelMode = files.getSetting("labels");
-
 		factory.setup.connect((obj) => {
 			var listitem = (Gtk.ListItem)obj;
 
@@ -490,7 +488,7 @@ public class Window : Gtk.ApplicationWindow {
 			string filepath = gif.filePath;
 			string filename = gif.fileName;
 			string filedatetime = gif.dateTime.to_string();
-			var box = (Gtk.Box) listitem.get_child();
+			var box = (Gtk.Box)listitem.get_child();
 			box.set_focusable(true);
 
 			//var overlay = (Gtk.Overlay)box.get_first_child();
@@ -515,20 +513,7 @@ public class Window : Gtk.ApplicationWindow {
 			var label = listitem.get_data<Gtk.Label>("label");
 			gifs.makeGifsSmall(picture, filepath);
 
-			int length = filename.length;
-			if (labelMode == "0") {
-				if (length > 32) {
-					string newfilename = filename[0:29] + "[...]" + filename[length - 4: length];
-					label.set_label(newfilename);
-				} else
-					label.set_label(filename);
-			} else {
-				if (length > 36) {
-					string newfilename = filename[0:35] + "[...]";
-					label.set_label(newfilename);
-				} else
-					label.set_label(filename[0:length - 4]);
-			}
+			updateGifLabel(label, gif);
 			
 			updateFavoriteButton(favoriteButton, gif);
 
@@ -620,6 +605,27 @@ public class Window : Gtk.ApplicationWindow {
 		});
 
 		files.writeToLog("Factory set\n");
+	}
+
+	public void updateGifLabel(Gtk.Label label, Gif gif) {
+		string labelMode = files.getSetting("labels");
+		string filename = gif.fileName;
+
+		int length = filename.length;
+			if (labelMode == "0") {
+				if (length > 32) {
+					string newfilename = filename[0:29] + "[...]" + filename[length - 4: length];
+					label.set_label(newfilename);
+				} else
+					label.set_label(filename);
+			} else if (labelMode == "1") {
+				if (length > 36) {
+					string newfilename = filename[0:35] + "[...]";
+					label.set_label(newfilename);
+				} else
+					label.set_label(filename[0:length - 4]);
+			} else
+				label.set_label(gif.displayName);
 	}
 
 	public void setClipboard(string filename) {
