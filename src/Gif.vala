@@ -101,7 +101,7 @@ public class Gif : Object {
 	}
 
 	// updates the gif data
-	public void updateData(string[] newtags, string gifname, string displayname, string filePath) {
+	public void updateData(string[] newtags, Gif gif, string displayname, string filePath) {
 		try {
 			Json.Object? targetObject = null;
 
@@ -117,7 +117,7 @@ public class Gif : Object {
 				var item = files.get_object_element(i);
 
 				if (item.has_member("fileName") &&
-					item.get_string_member("fileName") == gifname) {
+					item.get_string_member("fileName") == gif.fileName) {
 					targetObject = item;
 					break;
 				}
@@ -143,11 +143,13 @@ public class Gif : Object {
 
 				targetObject.set_array_member("tags", newTags);
 
-				/*if (displayname == null)
-					targetObject.set_string_member("displayName", fileName);
+				if (displayname == null)
+					targetObject.set_string_member("displayName", "");
 				else
-					if (targetObject.get_string_member("displayName") != displayname)
-						targetObject.set_string_member("displayName", displayname);*/
+					if (targetObject.get_string_member("displayName") != displayname) {
+						targetObject.set_string_member("displayName", displayname);
+						gif.displayName = displayname;
+					}
 
 				// Write the updated JSON array back to the file
 				var generator = new Json.Generator();
@@ -156,7 +158,7 @@ public class Gif : Object {
 				generator.to_file(filePath);
 
 			} else {
-				print("File not found in JSON: %s\n", gifname);
+				print("File not found in JSON: %s\n", gif.fileName);
 			}
 
 		} catch (Error e) {

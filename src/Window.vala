@@ -76,6 +76,7 @@ public class Window : Gtk.ApplicationWindow {
 	private string env = null;
 
 	private ArrayList<string> filterArray = new ArrayList<string>();
+	private ArrayList<Gtk.ListItem> boundItems = new ArrayList<Gtk.ListItem>();
 
 	// main window logic
     public Window(Gtk.Application app, Files files) {
@@ -513,6 +514,12 @@ public class Window : Gtk.ApplicationWindow {
 			var label = listitem.get_data<Gtk.Label>("label");
 			gifs.makeGifsSmall(picture, filepath);
 
+			listitem.set_data<Gif> ("gif", gif);
+			updateGifLabel(label, gif);
+
+			if (!boundItems.contains(listitem))
+				boundItems.add(listitem);
+
 			updateGifLabel(label, gif);
 			
 			updateFavoriteButton(favoriteButton, gif);
@@ -567,15 +574,10 @@ public class Window : Gtk.ApplicationWindow {
 		});
 
 		factory.unbind.connect((obj) => {
-
 			var listitem = (Gtk.ListItem)obj;
-
 			var gif = (Gif)listitem.get_item();
-
 			var box = (Gtk.Box)listitem.get_child();
-
 			var overlay = (Gtk.Overlay)box.get_first_child();
-
 			var picture = (Gtk.Picture)overlay.get_child();
 
 			uint player = picture.get_data("gif-timeout");
@@ -601,10 +603,42 @@ public class Window : Gtk.ApplicationWindow {
 				favoriteButton.disconnect(clicked_id);
 			}
 
+    		boundItems.remove((Gtk.ListItem)obj);
+
 			picture.set_paintable(null);
 		});
 
 		files.writeToLog("Factory set\n");
+	}
+
+	public void onLabelModeChanged() {
+		foreach (var listitem in boundItems) {
+			var label = listitem.get_data<Gtk.Label>("label");
+			var gif = listitem.get_data<Gif>("gif");
+			updateGifLabel(label, gif);
+		}
+	}
+
+	public void onLabelContentChanged() {
+
+		foreach (var item in boundItems) {
+			var gif = item.get_data<Gif>("gif");
+			var label = item.get_data<Gtk.Label>("label");
+
+			warning("no seco comeu: " + label.get_label());
+			warning("no seco nasceu: " + gif.displayName);
+
+			if (label.get_label() != gif.displayName) {
+				label.set_label(gif.displayName);
+				warning("veio cá");
+			} else {
+				warning("n dá nada");
+			}
+				
+		}
+
+		//  var gif = listitem.get_data<Gif>("gif");
+		//  updateGifLabel(label, gif);
 	}
 
 	public void updateGifLabel(Gtk.Label label, Gif gif) {
@@ -612,20 +646,20 @@ public class Window : Gtk.ApplicationWindow {
 		string filename = gif.fileName;
 
 		int length = filename.length;
-			if (labelMode == "0") {
-				if (length > 32) {
-					string newfilename = filename[0:29] + "[...]" + filename[length - 4: length];
-					label.set_label(newfilename);
-				} else
-					label.set_label(filename);
-			} else if (labelMode == "1") {
-				if (length > 36) {
-					string newfilename = filename[0:35] + "[...]";
-					label.set_label(newfilename);
-				} else
-					label.set_label(filename[0:length - 4]);
+		if (labelMode == "0") {
+			if (length > 32) {
+				string newfilename = filename[0:29] + "[...]" + filename[length - 4: length];
+				label.set_label(newfilename);
 			} else
-				label.set_label(gif.displayName);
+				label.set_label(filename);
+		} else if (labelMode == "1") {
+			if (length > 36) {
+				string newfilename = filename[0:35] + "[...]";
+				label.set_label(newfilename);
+			} else
+				label.set_label(filename[0:length - 4]);
+		} else
+			label.set_label(gif.displayName);
 	}
 
 	public void setClipboard(string filename) {

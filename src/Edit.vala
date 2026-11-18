@@ -147,8 +147,12 @@ public class Edit : Object {
                 iterator = (Gtk.Widget)child;
             }
 
-            gif.updateData(tags, gif.fileName, friendlynameentry.get_text(), gifs.getFilePath());
+            gif.updateData(tags, gif, friendlynameentry.get_text(), gifs.getFilePath());
             gif.tags = tags;
+
+            warning("o dinossauro: " + gif.displayName);
+
+            window.onLabelContentChanged();
 
             files.writeToLog("Closed edit window via OK button\n");
 
@@ -189,7 +193,7 @@ public class Edit : Object {
                 iterator = (Gtk.Widget)child;
             }
 
-            gif.updateData(tags, gif.fileName, friendlynameentry.get_text(), gifs.getFilePath());
+            gif.updateData(tags, gif, friendlynameentry.get_text(), gifs.getFilePath());
 
             files.writeToLog("Applied edits\n");
 		});

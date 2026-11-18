@@ -155,6 +155,8 @@ public class Settings {
 			
 			if (changedtags)
 				window.refreshChecks();
+
+			window.onLabelModeChanged();
 				
 			files.writeToLog("Closed settings window via OK button\n");
 			mainwindow.destroy();
@@ -391,7 +393,7 @@ public class Settings {
 		#else
 			deletebutton = new Gtk.Button.from_icon_name("delete-symbolic");
 		#endif
-		deletebutton.set_data<string> ("action", "delete");
+		deletebutton.set_data<string>("action", "delete");
 		deletebutton.add_css_class("linked");
 		deletebutton.set_tooltip_markup("Delete tag");
 
